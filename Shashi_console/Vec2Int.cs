@@ -1,0 +1,35 @@
+﻿namespace Core;
+
+public struct Vec2Int : IEquatable<Vec2Int>
+{
+    public int X;
+    public int Y;
+
+    public Vec2Int(int x, int y)
+    {
+        X = x;
+        Y = y;
+    }
+
+    public override string ToString()
+    {
+        return $"V2I({X}, {Y})";
+    }
+
+    public override int GetHashCode()
+    {
+        return HashCode.Combine(X, Y);
+    }
+
+    public bool Equals(Vec2Int other)
+    {
+        return X == other.X && Y == other.Y;
+    }
+
+    public readonly string AsNotation()
+    {
+        var horizontalNotation = (char) ('a' + X);
+        var verticalNotation = Constants.BOARD_SIZE - Y;
+        return $"{horizontalNotation}{verticalNotation}";
+    }
+}
