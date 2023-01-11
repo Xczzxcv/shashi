@@ -1,9 +1,8 @@
 ﻿using System.Diagnostics;
-using Shashi_console;
 
 namespace Core;
 
-public struct SideState
+public struct SideState : IEquatable<SideState>
 {
     public readonly Side Side;
     private ulong _state;
@@ -19,18 +18,24 @@ public struct SideState
         Side = side;
         _state = default;
     }
-    
+
+    public static SideState Empty(Side side)
+    {
+        var initState = new SideState(side);
+        return initState;
+    }
+
     public static SideState InitialWhite()
     {
-        var initState = new SideState(Side.White);
-        FillSide(InitCheckersCount, CheckersPartShift, ref initState);
+        var initState = Empty(Side.White);
+        FillSide(InitCheckersCount, KingsPartShift - InitCheckersCount, ref initState);
         return initState;
     }
 
     public static SideState InitialBlack()
     {
-        var initState = new SideState(Side.Black);
-        FillSide(InitCheckersCount, KingsPartShift - InitCheckersCount, ref initState);
+        var initState = Empty(Side.Black);
+        FillSide(InitCheckersCount, CheckersPartShift, ref initState);
         return initState;
     }
 
@@ -38,24 +43,58 @@ public struct SideState
     {
         for (int i = startIndex; i < startIndex + count; i++)
         {
-            var mask = 1ul << i;
-            initState._state |= mask;
+            initState.SetBitAtIndex(i, true);
         }
     }
 
-    public bool HasChecker(Vec2Int pos)
+    private void SetBitAtIndex(int index, bool newValue)
+    {
+        ulong mask;
+        if (newValue)
+        {
+            mask = 1ul << index;
+            _state |= mask;
+        }
+        else
+        {
+            mask = 1ul << index;
+            mask = ~mask;
+            _state &= mask;
+        }
+    }
+
+    public readonly bool TryGetPiece(Vec2Int pos, out Piece piece)
+    {
+        if (HasChecker(pos))
+        {
+            piece = new Piece(Side, PieceRank.Checker, pos);
+            return true;
+        }
+        else if (HasKing(pos))
+        {
+            piece = new Piece(Side, PieceRank.King, pos);
+            return true;
+        }
+        else
+        {
+            piece = default;
+            return false;
+        }
+    }
+
+    private readonly bool HasChecker(Vec2Int pos)
     {
         return HasPiece(pos, CheckersPartShift);
     }
 
-    public bool HasKing(Vec2Int pos)
+    private readonly bool HasKing(Vec2Int pos)
     {
         return HasPiece(pos, KingsPartShift);
     }
 
-    private bool HasPiece(Vec2Int pos, int shift)
+    private readonly bool HasPiece(Vec2Int pos, int shift)
     {
-        Debug.Assert(BoardState.IsBlackSquare(pos),
+        Debug.Assert(Board.IsBlackSquare(pos),
             $"[{nameof(SideState)}, {nameof(HasPiece)}] Pos: {pos}");
 
         var blackSquareBitIndex = GetBlackSquareBitIndex(pos);
@@ -69,18 +108,20 @@ public struct SideState
         return blackSquareBitIndex;
     }
 
-    private static Vec2Int GetPos(int blackSquareBitIndex)
+    public static Vec2Int GetPos(int blackSquareBitIndex)
     {
         var rowIndex = blackSquareBitIndex / Constants.BLACK_SQUARE_ROW_AMOUNT;
         var addColumnShift = rowIndex % 2 == 0 ? 1 : 0;
-        var columnIndex = blackSquareBitIndex % Constants.BLACK_SQUARE_ROW_AMOUNT + addColumnShift;
+        var blackSquareShareIndex = blackSquareBitIndex % Constants.BLACK_SQUARE_ROW_AMOUNT;
+        var columnIndex = blackSquareShareIndex * Constants.BLACK_SQUARE_ROW_SHARE
+                          + addColumnShift;
         return new Vec2Int(
             columnIndex,
             rowIndex
         );
     }
 
-    private bool HasPieceAtBlackSquareIndex(int pieceIndex)
+    private readonly bool HasPieceAtBlackSquareIndex(int pieceIndex)
     {
         var mask = 1ul << pieceIndex;
         var result = _state & mask;
@@ -92,12 +133,7 @@ public struct SideState
         return _state.ToString();
     }
 
-    public override int GetHashCode()
-    {
-        return _state.GetHashCode();
-    }
-
-    public List<Piece> GetPieces()
+    public readonly List<Piece> GetPieces()
     {
         var result = new List<Piece>();
         for (int i = CheckersPartShift; i < KingsPartShift; i++)
@@ -123,5 +159,40 @@ public struct SideState
         }
 
         return result;
+    }
+
+    public void SetPiece(in Piece piece)
+    {
+        Debug.Assert(piece.Side == Side);
+        SetPieceInternal(piece, true);
+    }
+
+    public void DelPiece(in Piece piece)
+    {
+        Debug.Assert(piece.Side == Side);
+        SetPieceInternal(piece, false);
+    }
+
+    private void SetPieceInternal(Piece piece, bool pieceStatus)
+    {
+        var blackSquareBitIndex = GetBlackSquareBitIndex(piece.Position);
+        var initialBitShift = piece.Rank switch
+        {
+            PieceRank.Checker => CheckersPartShift,
+            PieceRank.King => KingsPartShift,
+            _ => throw new ArgumentException($"Unknown piece {piece} rank")
+        };
+
+        SetBitAtIndex(initialBitShift + blackSquareBitIndex, pieceStatus);
+    }
+
+    public bool Equals(SideState other)
+    {
+        return Side == other.Side && _state == other._state;
+    }
+
+    public override int GetHashCode()
+    {
+        return HashCode.Combine((int) Side, _state);
     }
 }

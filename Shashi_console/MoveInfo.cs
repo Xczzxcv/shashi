@@ -1,23 +1,34 @@
 ﻿namespace Core;
 
-public struct MoveInfo
+public struct MoveInfo : IPoolable
 {
     public enum Type
     {
+        None,
         Move,
         Take
     }
+    
+    public int Id { get; }
 
     public Type MoveType;
     public Move Move;
-    public List<Take> Take;
+    public List<Take> Takes;
 
-    public static MoveInfo BuildTake(BoardState boardState, Piece piece, Piece enemyPiece)
+    public static MoveInfo BuildTake(Piece piece, Piece enemyPiece, Vec2Int takeDestPos)
     {
         var take = new MoveInfo
         {
             MoveType = Type.Take,
-            Take = new List<Take>()
+            Takes = new List<Take>
+            {
+                new()
+                {
+                    SrcPos = piece.Position,
+                    DestPos = takeDestPos,
+                    TakenPiecePos = enemyPiece.Position
+                }
+            }
         };
 
         return take;
@@ -44,13 +55,13 @@ public struct MoveInfo
         switch (MoveType)
         {
             case Type.Move:
-                infoString = $"{Move.SrcPos.AsNotation()}-->{Move.DestPos.AsNotation()}";
+                infoString = $"{Move.SrcPos.AsNotation()}->{Move.DestPos.AsNotation()}";
                 break;
             case Type.Take:
                 infoString = string.Empty;
-                foreach (var take in Take)
+                foreach (var take in Takes)
                 {
-                    infoString += $"{take.SrcPos.AsNotation()}-X>{take.DestPos.AsNotation()}, ";
+                    infoString += $"{take.SrcPos.AsNotation()}X{take.TakenPiecePos.AsNotation()}>{take.DestPos.AsNotation()}, ";
                 }
                 break;
             default:
@@ -59,6 +70,13 @@ public struct MoveInfo
         }
 
         return $"{MoveType}: {infoString}";
+    }
+    
+    public void Reset()
+    {
+        MoveType = Type.None;
+        Move = default;
+        Takes.Clear();
     }
 }
 
@@ -72,4 +90,5 @@ public struct Take
 {
     public Vec2Int SrcPos;
     public Vec2Int DestPos;
+    public Vec2Int TakenPiecePos;
 }

@@ -32,4 +32,14 @@ public struct Vec2Int : IEquatable<Vec2Int>
         var verticalNotation = Constants.BOARD_SIZE - Y;
         return $"{horizontalNotation}{verticalNotation}";
     }
+    
+    public static Vec2Int operator * (Vec2Int vec2Int, int multiplier)
+    {
+        return new Vec2Int(vec2Int.X * multiplier, vec2Int.Y * multiplier);
+    }
+
+    public static Vec2Int operator + (Vec2Int vec2Int, Vec2Int other)
+    {
+        return new Vec2Int(vec2Int.X + other.X, vec2Int.Y + other.Y);
+    }
 }

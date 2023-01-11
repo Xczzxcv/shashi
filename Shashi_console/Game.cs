@@ -1,119 +1,114 @@
-﻿namespace Core;
+﻿using System.Diagnostics;
+
+namespace Core;
 
 public class Game
 {
-    private readonly List<MoveInfo> _possibleMoves = new();
-    private BoardState _boardState;
+    private readonly RulesManager _rulesManager;
+    private Board _board;
+    public Side CurrTurnSide { get; private set; }
 
+    public Game()
+    {
+        _rulesManager = new RulesManager();
+    }
+    
     public void Init()
     {
-        _boardState = BoardState.Initial();
+        _board = Board.Initial();
+        CurrTurnSide = Side.White;
     }
 
     public List<MoveInfo> GetPossibleSideMoves(Side side)
     {
-        _possibleMoves.Clear();
-        var pieces = GetPieces(side);
-        foreach (var piece in pieces)
+        return _rulesManager.GetPossibleSideMoves(side, _board);
+    }
+
+    public void MakeMove(MoveInfo move)
+    {
+        switch (move.MoveType)
         {
-            AddPossiblePieceMoves(piece);
+            case MoveInfo.Type.Move:
+                PerformMove(move);
+                break;
+            case MoveInfo.Type.Take:
+                PerformTake(move);
+                break;
+            default:
+                throw new ArgumentException($"Unknown move type ({move})");
         }
 
-        return _possibleMoves;
+        FlipTurn();
     }
 
-    private List<Piece> GetPieces(Side side)
+    private void FlipTurn()
     {
-        var piecesSrc = side == Side.White
-            ? _boardState.White
-            : _boardState.Black;
-        return piecesSrc.GetPieces();
+        CurrTurnSide = GetOppositeSide(CurrTurnSide);
     }
 
-    private void AddPossiblePieceMoves(Piece piece)
+    private void PerformMove(MoveInfo move)
     {
-        if (TryAddPossibleTakes(piece))
+        if (!_board.TryGetPiece(move.Move.SrcPos, out var piece))
         {
-            return;
+            throw new ArgumentException($"Can't perform move {move} cuz no piece " +
+                                        $"at src pos {move.Move.SrcPos} on board {_board}");
         }
 
-        AddPossibleMoves(piece);
+        var destPiece = new Piece(piece.Side, piece.Rank, move.Move.DestPos);
+        _board.DelSquareContent(piece);
+        _board.SetSquareContent(destPiece);
     }
 
-    private bool TryAddPossibleTakes(Piece piece)
+    private void PerformTake(MoveInfo move)
     {
-        var vulnerableEnemyPieces = Enumerable.Empty<Piece>();
-        var possibleTakesCounter = 0;
-        foreach (var enemyPiece in vulnerableEnemyPieces)
+        foreach (var take in move.Takes)
         {
-            if (!CanTake(piece, enemyPiece))
-            {
-                continue;
-            }
-
-            var possibleTake = MoveInfo.BuildTake(_boardState, piece, enemyPiece);
-            _possibleMoves.Add(possibleTake);
-            possibleTakesCounter++;
-        }
-
-        return possibleTakesCounter > 0;
-    }
-
-    private bool CanTake(Piece piece, Piece enemyPiece)
-    {
-        return false;
-    }
-
-    private void AddPossibleMoves(Piece piece)
-    {
-        var boardSquares = _boardState.GetEmptySquares();
-        foreach (var boardSquare in boardSquares)
-        {
-            if (!CanMoveTo(piece, boardSquare))
-            {
-                continue;
-            }
-
-            var possibleTake = MoveInfo.BuildMove(piece, boardSquare);
-            _possibleMoves.Add(possibleTake);
+            PerformSingleTake(take);
         }
     }
 
-    private bool CanMoveTo(Piece piece, Vec2Int boardSquare)
+    private void PerformSingleTake(Take take)
     {
-        if (!_boardState.IsEmptySquare(boardSquare))
+        if (!_board.TryGetPiece(take.SrcPos, out var movedPiece))
         {
-            return false;
+            throw new ArgumentException($"Can't perform take {take} cuz no piece " +
+                                        $"at src pos {take.SrcPos} on board {_board}");
         }
 
-        var diffX = boardSquare.X - piece.Position.X;
-        var diffY = boardSquare.Y - piece.Position.Y;
-        var rangeIs1ByDiagonal = Math.Abs(diffX) == 1 && Math.Abs(diffY) == 1;
-        if (!rangeIs1ByDiagonal)
+        if (!_board.TryGetPiece(take.TakenPiecePos, out var takenPiece))
         {
-            return false;
+            throw new ArgumentException($"Can't perform take {take} cuz no piece " +
+                                        $"at taken piece pos {take.SrcPos} on board {_board}");
         }
 
-        if (piece.Rank == PieceRank.Checker)
-        {
-            if (piece.Side == Side.White
-                && diffY <= 0)
-            {
-                return false;
-            }
-
-            if (piece.Side == Side.Black
-                && diffY >= 0)
-            {
-                return false;
-            }
-        }
-
-        return true;
+        var destPiece = new Piece(movedPiece.Side, movedPiece.Rank, take.DestPos);
+        _board.DelSquareContent(movedPiece);
+        _board.DelSquareContent(takenPiece);
+        _board.SetSquareContent(destPiece);
     }
 
     public string GetView()
     {
-        return _boardState.GetView();
+        return _board.GetView();
+    }
+
+    public Board GetBoardState()
+    {
+        return _board;
+    }
+
+    public void SetBoardState(Board newBoard)
+    {
+        _board = newBoard;
+    }
+
+    public static Side GetOppositeSide(Side side)
+    {
+        return side switch
+        {
+            Side.White => Side.Black,
+            Side.Black => Side.White,
+            _ => throw new NotImplementedException($"Unknown turn side value {side}")
+        };
     }
 }
