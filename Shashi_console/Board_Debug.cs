@@ -32,8 +32,9 @@ public partial struct Board
     public void SetState(string stateStr)
     {
         var index = 0;
-        foreach (var squareInfo in stateStr)
+        for (var i = 0; i < stateStr.Length && index < 32; i++)
         {
+            var squareInfo = stateStr[i];
             if (!TryGetSquareContent(squareInfo, out var squareState))
             {
                 continue;

@@ -42,4 +42,14 @@ public struct Vec2Int : IEquatable<Vec2Int>
     {
         return new Vec2Int(vec2Int.X + other.X, vec2Int.Y + other.Y);
     }
+
+    public static Vec2Int operator - (Vec2Int vec2Int, Vec2Int other)
+    {
+        return new Vec2Int(vec2Int.X - other.X, vec2Int.Y - other.Y);
+    }
+
+    public static Vec2Int operator / (Vec2Int vec2Int, int divider)
+    {
+        return new Vec2Int(vec2Int.X / divider, vec2Int.Y / divider);
+    }
 }

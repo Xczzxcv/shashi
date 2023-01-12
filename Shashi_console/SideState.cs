@@ -11,7 +11,7 @@ public struct SideState : IEquatable<SideState>
     private const int PartLength = 32;
     private const int CheckersPartShift = 0;
     private const int KingsPartShift = CheckersPartShift + PartLength;
-    private const int InitCheckersCount = Constants.BLACK_SQUARE_ROW_AMOUNT * (Constants.BOARD_SIZE / 2 - 1);
+    public const int INIT_CHECKERS_COUNT = Constants.BLACK_SQUARE_ROW_AMOUNT * (Constants.BOARD_SIZE / 2 - 1);
 
     private SideState(Side side)
     {
@@ -28,14 +28,14 @@ public struct SideState : IEquatable<SideState>
     public static SideState InitialWhite()
     {
         var initState = Empty(Side.White);
-        FillSide(InitCheckersCount, KingsPartShift - InitCheckersCount, ref initState);
+        FillSide(INIT_CHECKERS_COUNT, KingsPartShift - INIT_CHECKERS_COUNT, ref initState);
         return initState;
     }
 
     public static SideState InitialBlack()
     {
         var initState = Empty(Side.Black);
-        FillSide(InitCheckersCount, CheckersPartShift, ref initState);
+        FillSide(INIT_CHECKERS_COUNT, CheckersPartShift, ref initState);
         return initState;
     }
 

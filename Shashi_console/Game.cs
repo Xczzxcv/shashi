@@ -1,6 +1,4 @@
-﻿using System.Diagnostics;
-
-namespace Core;
+﻿namespace Core;
 
 public class Game
 {
@@ -92,14 +90,15 @@ public class Game
         return _board.GetView();
     }
 
-    public Board GetBoardState()
+    public Board GetBoard()
     {
         return _board;
     }
 
-    public void SetBoardState(Board newBoard)
+    public void SetGameState(Board newBoard, Side currentTurnSide)
     {
         _board = newBoard;
+        CurrTurnSide = currentTurnSide;
     }
 
     public static Side GetOppositeSide(Side side)

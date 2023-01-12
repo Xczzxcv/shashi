@@ -166,4 +166,10 @@ public partial struct Board : IEquatable<Board>
         piece = new Piece(side, rank, pos);
         return true;
     }
+
+    public static bool IsValidSquare(Vec2Int boardSquare)
+    {
+        return 0 <= boardSquare.X && boardSquare.X < Constants.BOARD_SIZE
+            && 0 <= boardSquare.Y && boardSquare.Y < Constants.BOARD_SIZE;
+    }
 }

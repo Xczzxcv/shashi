@@ -8,18 +8,50 @@ public static class Program
     {
         var game = new Game();
         game.Init();
-        var possibleMoves = game.GetPossibleSideMoves(Side.White);
+        
+        // SetCustomPos(game);
+        SimulateGame(game);
+    }
+
+    private static void ShowPossibleMoves(Game game)
+    {
+        var possibleMoves = game.GetPossibleSideMoves(game.CurrTurnSide);
         Console.WriteLine(
+            "Possible moves:\n" +
             string.Join(",\n", possibleMoves)
         );
-        Console.WriteLine(game.GetView());
+    }
 
+    private static void SetCustomPos(Game game)
+    {
+        const string boardStateString = @"
+8|█*█*█*█*
+7|*█*█*█*█
+6|█░█*█░█0
+5|*█░█░█*█
+4|█░█0█░█░
+3|0█░█0█░█
+2|█0█0█0█0
+1|0█0█0█0█
+  ABCDEFGH
+";
+        var loadedBoard = Board.Empty();
+        loadedBoard.SetState(boardStateString);
+        game.SetGameState(loadedBoard, Side.White);
+    }
+
+    private static void SimulateGame(Game game)
+    {
         var ai = new CheckersAi();
 
-        const int MOVES_COUNT = 10;
+        Console.WriteLine(game.GetView());
+
+        const int MOVES_COUNT = 20;
         for (int i = 0; i < MOVES_COUNT; i++)
         {
+            ShowPossibleMoves(game);
             var chosenMove = ai.ChooseMove(game, game.CurrTurnSide);
+            Console.WriteLine($"AI chose move {chosenMove}");
             game.MakeMove(chosenMove);
             Console.WriteLine(game.GetView());
         }

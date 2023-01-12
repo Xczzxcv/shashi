@@ -15,20 +15,12 @@ public struct MoveInfo : IPoolable
     public Move Move;
     public List<Take> Takes;
 
-    public static MoveInfo BuildTake(Piece piece, Piece enemyPiece, Vec2Int takeDestPos)
+    public static MoveInfo BuildTake(List<Take> takes)
     {
         var take = new MoveInfo
         {
             MoveType = Type.Take,
-            Takes = new List<Take>
-            {
-                new()
-                {
-                    SrcPos = piece.Position,
-                    DestPos = takeDestPos,
-                    TakenPiecePos = enemyPiece.Position
-                }
-            }
+            Takes = takes
         };
 
         return take;
@@ -55,14 +47,10 @@ public struct MoveInfo : IPoolable
         switch (MoveType)
         {
             case Type.Move:
-                infoString = $"{Move.SrcPos.AsNotation()}->{Move.DestPos.AsNotation()}";
+                infoString = Move.ToString();
                 break;
             case Type.Take:
-                infoString = string.Empty;
-                foreach (var take in Takes)
-                {
-                    infoString += $"{take.SrcPos.AsNotation()}X{take.TakenPiecePos.AsNotation()}>{take.DestPos.AsNotation()}, ";
-                }
+                infoString = string.Join(", ", Takes.Select(take => take.ToString()));
                 break;
             default:
                 infoString = string.Empty;
@@ -84,6 +72,11 @@ public struct Move
 {
     public Vec2Int SrcPos;
     public Vec2Int DestPos;
+
+    public override string ToString()
+    {
+        return $"{SrcPos.AsNotation()}->{DestPos.AsNotation()}";
+    }
 }
 
 public struct Take
@@ -91,4 +84,9 @@ public struct Take
     public Vec2Int SrcPos;
     public Vec2Int DestPos;
     public Vec2Int TakenPiecePos;
+
+    public override string ToString()
+    {
+        return $"{SrcPos.AsNotation()}X{TakenPiecePos.AsNotation()}>{DestPos.AsNotation()}";
+    }
 }
