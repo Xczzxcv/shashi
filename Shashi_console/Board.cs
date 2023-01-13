@@ -96,26 +96,6 @@ public partial struct Board : IEquatable<Board>
             : pos.X % 2 == 0;
     }
 
-    public readonly List<Vec2Int> GetEmptySquares()
-    {
-        var emptySquares = new List<Vec2Int>();
-        for (int i = 0; i < Constants.BOARD_SIZE; i++)
-        {
-            for (int j = 0; j < Constants.BOARD_SIZE; j++)
-            {
-                var currPos = new Vec2Int(j, i);
-                if (!IsEmptySquare(currPos))
-                {
-                    continue;
-                }
-
-                emptySquares.Add(currPos);
-            }
-        }
-
-        return emptySquares;
-    }
-
     public readonly bool IsEmptySquare(Vec2Int pos)
     {
         if (!IsBlackSquare(pos))

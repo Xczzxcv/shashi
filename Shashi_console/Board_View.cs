@@ -9,7 +9,7 @@ public partial struct Board
     private const char WhiteKing = 'W';
     private const char BlackKing = 'B';
 
-    public string GetView()
+    public readonly string GetView()
     {
         var resultStr = string.Empty;
         for (int i = 0; i < Constants.BOARD_SIZE; i++)
@@ -62,6 +62,7 @@ public partial struct Board
         {
             resultStr += (char) ('A' + i);
         }
+        resultStr += '\n';
 
         return resultStr;
     }

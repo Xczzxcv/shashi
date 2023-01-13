@@ -116,4 +116,9 @@ public class Game
             _ => throw new NotImplementedException($"Unknown turn side value {side}")
         };
     }
+
+    public int GetBoardHash()
+    {
+        return _board.GetHashCode();
+    }
 }

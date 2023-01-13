@@ -32,13 +32,17 @@ public class RulesManager
         return possibleTakesCounter > 0;
     }
 
-    private readonly Vec2Int[] _defaultAttackDirections =
+    private static readonly Vec2Int[] DiagonalDirections =
     {
         new(-1, -1),
         new(1, -1),
         new(1, 1),
         new(-1, 1)
     };
+
+    private readonly Vec2Int[] _moveDirections = DiagonalDirections;
+    private readonly Vec2Int[] _defaultAttackDirections = DiagonalDirections;
+
     private int AddPossiblePieceTakes(List<MoveInfo> possibleMoves, Piece piece, Board board,
         bool noEnemiesMeansSuccess, Vec2Int[]? attackDirections = null)
     {
@@ -74,9 +78,7 @@ public class RulesManager
 
     private List<Vec2Int> GetPossibleTakeDestPositions(Piece piece, Piece enemyPiece, Board board)
     {
-        var posDiff = enemyPiece.Position - piece.Position;
-        var attackDirection = posDiff / Math.Abs(posDiff.X);
-
+        var attackDirection = GetAttackDirection(piece, enemyPiece);
         var takeDestPositions = piece.Rank switch
         {
             PieceRank.Checker => GetPossibleTakeDestPositionsForChecker(enemyPiece, attackDirection, board),
@@ -85,6 +87,13 @@ public class RulesManager
         };
 
         return takeDestPositions;
+    }
+
+    private static Vec2Int GetAttackDirection(Piece piece, Piece enemyPiece)
+    {
+        var posDiff = enemyPiece.Position - piece.Position;
+        var attackDirection = posDiff / Math.Abs(posDiff.X);
+        return attackDirection;
     }
 
     private List<Vec2Int> GetPossibleTakeDestPositionsForChecker(Piece enemyPiece, 
@@ -207,13 +216,14 @@ public class RulesManager
     private int AddPossiblePieceToPieceTakes(List<MoveInfo> possibleMoves, Piece piece, 
         Piece checkedEnemyPiece, Board board)
     {
+        _takenPiecesPositions.Add(checkedEnemyPiece.Position);
         var possibleTakeDestPositions = GetPossibleTakeDestPositions(piece, checkedEnemyPiece, board);
         if (!possibleTakeDestPositions.Any())
         {
+            _takenPiecesPositions.Remove(checkedEnemyPiece.Position);
             return 0;
         }
 
-        _takenPiecesPositions.Add(checkedEnemyPiece.Position);
         var takesCount = 0;
         foreach (var possibleTakeDestPos in possibleTakeDestPositions)
         {
@@ -264,16 +274,25 @@ public class RulesManager
 
     private void AddPossiblePieceMoves(Piece piece, List<MoveInfo> possibleMoves, Board board)
     {
-        var boardSquares = board.GetEmptySquares();
-        foreach (var boardSquare in boardSquares)
+        var maxMoveRange = piece.Rank switch
         {
-            if (!CanMoveTo(piece, boardSquare, board))
+            PieceRank.Checker=>1,
+            PieceRank.King=>Constants.BOARD_SIZE - 1,
+            _ => throw new ArgumentException($"Unknown piece {piece} rank")
+        };
+        foreach (var moveDirection in _moveDirections)
+        {
+            for (int moveRange = 1; moveRange <= maxMoveRange; moveRange++)
             {
-                continue;
+                var possibleMoveDestPos = piece.Position + moveDirection * moveRange;
+                if (!CanMoveTo(piece, possibleMoveDestPos, board))
+                {
+                    continue;
+                }
+                
+                var possibleMove = MoveInfo.BuildMove(piece, possibleMoveDestPos);
+                possibleMoves.Add(possibleMove);
             }
-
-            var possibleMove = MoveInfo.BuildMove(piece, boardSquare);
-            possibleMoves.Add(possibleMove);
         }
     }
 
@@ -289,14 +308,7 @@ public class RulesManager
             return false;
         }
 
-        var diffX = boardSquare.X - piece.Position.X;
         var diffY = boardSquare.Y - piece.Position.Y;
-        var rangeIs1ByDiagonal = Math.Abs(diffX) == 1 && Math.Abs(diffY) == 1;
-        if (!rangeIs1ByDiagonal)
-        {
-            return false;
-        }
-
         if (piece.Rank == PieceRank.Checker)
         {
             if (piece.Side == Side.White
@@ -317,16 +329,9 @@ public class RulesManager
 
     private static bool CanTake(Piece piece, Piece enemyPiece, Board board)
     {
-        var diffX = enemyPiece.Position.X - piece.Position.X;
-        var diffY = enemyPiece.Position.Y - piece.Position.Y;
+        var attackDirection = GetAttackDirection(piece, enemyPiece);
 
-        var rangeIs1ByDiagonal = Math.Abs(diffX) == 1 && Math.Abs(diffY) == 1;
-        if (!rangeIs1ByDiagonal)
-        {
-            return false;
-        }
-
-        var neededEmptyPosition = piece.Position + new Vec2Int(diffX, diffY) * 2;
+        var neededEmptyPosition = enemyPiece.Position + attackDirection;
         if (!Board.IsValidSquare(neededEmptyPosition))
         {
             return false;
