@@ -52,7 +52,10 @@ public class Game
                                         $"at src pos {move.Move.SrcPos} on board {_board}");
         }
 
-        var destPiece = new Piece(piece.Side, piece.Rank, move.Move.DestPos);
+        var destPos = move.Move.DestPos;
+        var pieceRank = RulesManager.ProcessPiecePromotion(piece, destPos);
+
+        var destPiece = new Piece(piece.Side, pieceRank, destPos);
         _board.DelSquareContent(piece);
         _board.SetSquareContent(destPiece);
     }
@@ -79,7 +82,10 @@ public class Game
                                         $"at taken piece pos {take.SrcPos} on board {_board}");
         }
 
-        var destPiece = new Piece(movedPiece.Side, movedPiece.Rank, take.DestPos);
+        var destPos = take.DestPos;
+        var pieceRank = RulesManager.ProcessPiecePromotion(movedPiece, destPos);
+
+        var destPiece = new Piece(movedPiece.Side, pieceRank, take.DestPos);
         _board.DelSquareContent(movedPiece);
         _board.DelSquareContent(takenPiece);
         _board.SetSquareContent(destPiece);

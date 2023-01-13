@@ -110,6 +110,11 @@ public struct SideState : IEquatable<SideState>
 
     public static Vec2Int GetPos(int blackSquareBitIndex)
     {
+        if (blackSquareBitIndex >= PartLength)
+        {
+            blackSquareBitIndex -= PartLength;
+        }
+
         var rowIndex = blackSquareBitIndex / Constants.BLACK_SQUARE_ROW_AMOUNT;
         var addColumnShift = rowIndex % 2 == 0 ? 1 : 0;
         var blackSquareShareIndex = blackSquareBitIndex % Constants.BLACK_SQUARE_ROW_AMOUNT;

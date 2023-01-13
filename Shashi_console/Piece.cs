@@ -7,6 +7,12 @@ public readonly struct Piece : IEquatable<Piece>
     public readonly Vec2Int Position;
 
     public Piece(
+        Piece piece,
+        Vec2Int newPosition
+    ) : this(piece.Side, piece.Rank, newPosition)
+    { }
+
+    public Piece(
         Side side,
         PieceRank rank,
         Vec2Int position

@@ -25,19 +25,19 @@ public static class Program
     private static void SetCustomPos(Game game)
     {
         const string boardStateString = @"
-8|█*█*█*█*
-7|*█*█*█*█
-6|█░█*█░█0
-5|*█░█░█*█
-4|█░█0█░█░
-3|0█░█0█░█
-2|█0█0█0█0
-1|0█0█0█0█
+8|█*█W█░█*
+7|*█░█░█░█
+6|█░█░█░█░
+5|0█░█░█░█
+4|█░█░█░█░
+3|░█░█░█0█
+2|█0█0█░█0
+1|0█0█░█░█
   ABCDEFGH
 ";
         var loadedBoard = Board.Empty();
         loadedBoard.SetState(boardStateString);
-        game.SetGameState(loadedBoard, Side.White);
+        game.SetGameState(loadedBoard, Side.Black);
     }
 
     private static void SimulateGame(Game game)
@@ -46,13 +46,14 @@ public static class Program
 
         Console.WriteLine(game.GetView());
 
-        const int MOVES_COUNT = 20;
+        const int MOVES_COUNT = 60;
         for (int i = 0; i < MOVES_COUNT; i++)
         {
             ShowPossibleMoves(game);
             var chosenMove = ai.ChooseMove(game, game.CurrTurnSide);
             Console.WriteLine($"AI chose move {chosenMove}");
             game.MakeMove(chosenMove);
+            Console.WriteLine($"After this move I rate this position as {ai.RatePosition(game.GetBoard())}");
             Console.WriteLine(game.GetView());
         }
     }
