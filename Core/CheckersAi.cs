@@ -1,6 +1,4 @@
-﻿using Shashi_console;
-
-namespace Core;
+﻿namespace Core;
 
 public class CheckersAi
 {
@@ -96,8 +94,8 @@ public class CheckersAi
         var possibleMoves = game.GetPossibleSideMoves(side);
         if (!possibleMoves.Any())
         {
-            Console.WriteLine($"No possible moves for {side} on board");
-            Console.WriteLine(game.GetView());
+            game.Log($"No possible moves for {side} on board");
+            game.Log(game.GetView());
             throw new ArgumentException("No possible moves");
         }
         
@@ -169,13 +167,13 @@ public class CheckersAi
     {
         return;
         var tabStr = new string('\t', Math.Max(0, depth));
-        Program.Log(game.GetView());
-        Program.Log($"{tabStr}{side}, depth: {depth}. In this position we rate our moves as so:\n");
+        game.Log(game.GetView());
+        game.Log($"{tabStr}{side}, depth: {depth}. In this position we rate our moves as so:\n");
         for (var moveInd = 0; moveInd < possibleMoves.Count; moveInd++)
         {
             var possibleMove = possibleMoves[moveInd];
             var possibleMoveRating = possibleMoveRatings[moveInd];
-            Program.Log($"{tabStr}* {possibleMove}: {possibleMoveRating}\n");
+            game.Log($"{tabStr}* {possibleMove}: {possibleMoveRating}\n");
         }
     }
 

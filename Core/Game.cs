@@ -3,12 +3,16 @@
 public class Game
 {
     private readonly RulesManager _rulesManager;
+    private readonly LogManager _logManager;
     private Board _board;
     public Side CurrTurnSide { get; private set; }
 
-    public Game()
+    public Game(ILogger? logger = null)
     {
         _rulesManager = new RulesManager();
+
+        _logManager = new LogManager();
+        _logManager.Setup(logger);
     }
     
     public void Init()
@@ -120,5 +124,10 @@ public class Game
     public int GetBoardHash()
     {
         return _board.GetHashCode();
+    }
+
+    public void Log(string logMessage)
+    {
+        _logManager.Log(logMessage);
     }
 }

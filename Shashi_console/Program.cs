@@ -1,17 +1,12 @@
-﻿using System.Text;
-using Core;
+﻿using Core;
 
 namespace Shashi_console;
 
 public static class Program
 {
-    private static FileStream _logFile;
-
     public static void Main()
     {
-        _logFile = new FileStream("log.txt", FileMode.Create);
-
-        var game = new Game();
+        var game = new Game(new ConsoleLogger());
         game.Init();
         
         SetCustomPos(game);
@@ -61,12 +56,5 @@ public static class Program
             Console.WriteLine($"After this move I rate this position as {ai.RatePosition(game.GetBoard())}");
             Console.WriteLine(game.GetView());
         }
-    }
-
-    public static void Log(string logString)
-    {
-        return;
-        var bytes = Encoding.Unicode.GetBytes(logString);
-        _logFile.Write(bytes);
     }
 }
