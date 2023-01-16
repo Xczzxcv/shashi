@@ -2,48 +2,77 @@
 
 namespace Core;
 
-public class Pool<T> where T : IPoolable, new()
+public static class HashsetHelper
+{
+    public static T GetAny<T>(this HashSet<T> hashSet)
+    {
+        var enumerator = hashSet.GetEnumerator();
+        enumerator.MoveNext();
+        enumerator.Dispose();
+        return enumerator.Current;
+    }
+}
+
+public class Pool<T> : IPool
+    where T : IPoolable, new()
 {
     private readonly Dictionary<int, T> _content = new();
-    private readonly Dictionary<int, bool> _status = new();
+    private readonly HashSet<int> _freeThings = new();
+    private readonly HashSet<int> _rentedThings = new();
 
-    private const int DEFAULT_CAPACITY_INCREASE_AMOUNT = 4;
+    private const int DefaultCapacityIncreaseAmount = 4;
     private readonly int _capacityIncreaseAmount;
 
     private int _currentIndex;
 
-    public Pool(int capacityIncreaseAmount = DEFAULT_CAPACITY_INCREASE_AMOUNT)
+    public Pool(int capacityIncreaseAmount = DefaultCapacityIncreaseAmount)
     {
         Debug.Assert(capacityIncreaseAmount > 0);
         _capacityIncreaseAmount = capacityIncreaseAmount;
         _currentIndex = 0;
     }
 
+    public long FreeTakenCounter;
+    public long SpawnedTakenCounter;
+    public int CurrentSize => _content.Count;
+    public int CurrentFreeCount => _freeThings.Count;
+    public int CurrentRentedCount => _rentedThings.Count;
+
     public T Get()
     {
         if (TryGetFree(out var poolable))
         {
-            return poolable;
+            FreeTakenCounter++;
+        }
+        else
+        {
+            SpawnedTakenCounter++;
+            poolable = SpawnSomeNew();
         }
 
-        return SpawnSomeNew();
+        return poolable;
     }
 
     private bool TryGetFree(out T poolable)
     {
-        foreach (var (index, isFree) in _status)
+        if (_freeThings.Count > 0)
         {
-            if (isFree)
-            {
-                {
-                    poolable = _content[index];
-                    return true;
-                }
-            }
+            poolable = RentPoolable(_freeThings.GetAny());
+            return true;
         }
 
         poolable = default;
         return false;
+    }
+
+    private T RentPoolable(int index)
+    {
+        Debug.Assert(_freeThings.Contains(index));
+        Debug.Assert(!_rentedThings.Contains(index));
+
+        _freeThings.Remove(index);
+        _rentedThings.Add(index);
+        return _content[index];
     }
 
     private T SpawnSomeNew()
@@ -54,23 +83,30 @@ public class Pool<T> where T : IPoolable, new()
             newStuffIndex = SpawnNew();
         }
 
-        return _content[newStuffIndex];
+        return RentPoolable(newStuffIndex);
     }
 
     private int SpawnNew()
     {
         var newStuff = new T();
         var newStuffIndex = _currentIndex;
+        newStuff.Setup(newStuffIndex, this);
+
         _content.Add(newStuffIndex, newStuff);
-        _status.Add(newStuffIndex, true);
+        _freeThings.Add(newStuffIndex);
         _currentIndex++;
 
         return newStuffIndex;
     }
 
-    public void Return(int index)
+    public void Return(IPoolable poolableObject)
     {
-        Debug.Assert(_status[index] == false);
-        _status[index] = true;
+        var index = poolableObject.Id;
+        Debug.Assert(!_freeThings.Contains(index));
+        Debug.Assert(_rentedThings.Contains(index));
+
+        _rentedThings.Remove(index);
+        _freeThings.Add(index);
+        _content[index].Reset();
     }
 }

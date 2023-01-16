@@ -6,10 +6,19 @@ public class Game
     private readonly LogManager _logManager;
     private Board _board;
     public Side CurrTurnSide { get; private set; }
+    public bool IsGameBeingPlayed => _currentGameState == GameState.GameBeingPlayed;
 
-    public Game(ILogger? logger = null)
+    private readonly Player _whitesPlayer;
+    private readonly Player _blacksPlayer;
+    private GameState _currentGameState;
+
+    public Game(Player? whitesPlayer, Player? blacksPlayer, ILogger? logger = null)
     {
+        _currentGameState = GameState.GameBeingPlayed;
         _rulesManager = new RulesManager();
+        
+        _whitesPlayer = whitesPlayer ?? new BotPlayer();
+        _blacksPlayer = blacksPlayer ?? new BotPlayer();
 
         _logManager = new LogManager();
         _logManager.Setup(logger);
@@ -24,6 +33,35 @@ public class Game
     public List<MoveInfo> GetPossibleSideMoves(Side side)
     {
         return _rulesManager.GetPossibleSideMoves(side, _board);
+    }
+
+    public async Task<(MoveInfo, GameState)> MakeMove()
+    {
+        if (_currentGameState != GameState.GameBeingPlayed)
+        {
+            return (default, _currentGameState);
+        }
+
+        var currentPlayer = GetCurrentPlayer();
+        var chosenMove = await currentPlayer.ChooseMove(this, CurrTurnSide);
+        MakeMove(chosenMove);
+        UpdateCurrentGameState();
+        return (chosenMove, _currentGameState);
+    }
+
+    private void UpdateCurrentGameState()
+    {
+        _currentGameState = _rulesManager.GetGameState(_board);
+    }
+
+    private Player GetCurrentPlayer()
+    {
+        return CurrTurnSide switch
+        {
+            Side.White => _whitesPlayer,
+            Side.Black => _blacksPlayer,
+            _ => throw new ArgumentException($"Unknown side value {CurrTurnSide}")
+        };
     }
 
     public void MakeMove(MoveInfo move)
@@ -109,6 +147,7 @@ public class Game
     {
         _board = newBoard;
         CurrTurnSide = currentTurnSide;
+        UpdateCurrentGameState();
     }
 
     public static Side GetOppositeSide(Side side)
@@ -130,4 +169,12 @@ public class Game
     {
         _logManager.Log(logMessage);
     }
+}
+
+public enum GameState
+{
+    None,
+    GameBeingPlayed,
+    WhiteWon,
+    BlackWon,
 }

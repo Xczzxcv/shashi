@@ -2,19 +2,19 @@
 
 public class CheckersAi
 {
-    private readonly float[] _checkersBoardSquareCoefficients = new float[Constants.BOARD_SIZE * Constants.BOARD_SIZE]
+    private static readonly float[] CheckersBoardSquareCoefficients = new float[Constants.BOARD_SIZE * Constants.BOARD_SIZE]
     {
         0, 0, 0, .3f, 0, 0, 0, -.1f,
         -.07f, 0, 0, 0, 0, 0, 0, 0,
-        0, 0, 0, 0, 0, 0, 0, -.07f,
-        -.07f, 0, .45f, 0, 0, 0, 0, 0,
-        0, 0, 0, 0, 0, .45f, 0, -.07f,
-        -.07f, 0, 0, 0, 0, 0, 0, 0,
+        0, .2f, 0, .2f, 0, 0, 0, -.07f,
+        .1f, 0, .45f, 0, .2f, 0, .2f, 0,
+        0, .2f, 0, .2f, 0, .45f, 0, .1f,
+        -.07f, 0, 0, 0, .2f, 0, .2f, 0,
         0, 0, 0, 0, 0, 0, 0, -.07f,
         -.1f, 0, 0, 0, .3f, 0, 0, 0,
     };
 
-    private readonly float[] _kingsBoardSquareCoefficients = new float[Constants.BOARD_SIZE * Constants.BOARD_SIZE]
+    private static readonly float[] KingsBoardSquareCoefficients = new float[Constants.BOARD_SIZE * Constants.BOARD_SIZE]
     {
         0, 0, 0, 0, 0, 0, 0, .1f,
         0, 0, 0, 0, 0, 0, .1f, 0,
@@ -26,18 +26,33 @@ public class CheckersAi
         .1f, 0, 0, 0, 0, 0, 0, 0,
     };
 
-    private const int MaxDepth = 8;
-    private const float LossRating = 10000;
-    private const float CheckerCost = 1;
-    private const float KingCost = 2.5f;
-
-    public struct RatedBoardState
+    private struct RatedBoardState
     {
         public int AnalyzedDepth;
         public float Rating;
     }
 
-    private readonly Dictionary<int, RatedBoardState> _ratedBoardStatesCached = new();
+    private static readonly Dictionary<int, RatedBoardState> RatedBoardStatesCached = new();
+
+    private const float LossRating = 10000;
+    private const float CheckerCost = 1;
+    private const float KingCost = 2.5f;
+    private const float NearPromotionBuff = 0.3f;
+
+    private readonly int _maxDepth;
+
+    public CheckersAi(int maxDepth)
+    {
+        _maxDepth = maxDepth;
+        InitPositionsCache();
+    }
+
+    private void InitPositionsCache()
+    {
+        const int empiricPower = 8;
+        var neededCapacity = Math.Pow(_maxDepth, empiricPower);
+        RatedBoardStatesCached.EnsureCapacity((int) neededCapacity);
+    }
 
     public float RatePosition(Board board)
     {
@@ -51,10 +66,13 @@ public class CheckersAi
         var min = Math.Min(whitePieceRating, blackPieceRating);
         var cft = MathF.Pow(max, 2) / MathF.Pow(min, 2);
         
+        whitePieces.ReturnToPool();
+        blackPieces.ReturnToPool();
+        
         return (whitePieceRating - blackPieceRating) * cft;
     }
 
-    private float RatePiecesValue(List<Piece> pieces)
+    private float RatePiecesValue(PiecesCollection pieces)
     {
         var piecesSumRating = 0f;
         foreach (var piece in pieces)
@@ -81,22 +99,46 @@ public class CheckersAi
     private float GetPiecePositionRating(Piece piece)
     {
         var boardSquareIndex = piece.Position.Y * Constants.BOARD_SIZE + piece.Position.X;
-        return piece.Rank switch
+        var piecePositionRating = piece.Rank switch
         {
-            PieceRank.Checker => _checkersBoardSquareCoefficients[boardSquareIndex],
-            PieceRank.King => _kingsBoardSquareCoefficients[boardSquareIndex],
+            PieceRank.Checker => CheckersBoardSquareCoefficients[boardSquareIndex],
+            PieceRank.King => KingsBoardSquareCoefficients[boardSquareIndex],
             _ => throw new ArgumentException($"Unknown piece {piece} rank"),
         };
+
+        ApplyNearPromotionBuff(piece, ref piecePositionRating);
+
+        return piecePositionRating;
+    }
+
+    private static void ApplyNearPromotionBuff(Piece piece, ref float  piecePositionRating)
+    {
+        if (piece.Rank != PieceRank.Checker)
+        {
+            return;
+        }
+
+        if (piece is {Side: Side.White, Position.Y: 1 or 2}
+            || piece is {Side: Side.Black, Position.Y: 1 or 2})
+        {
+            piecePositionRating += NearPromotionBuff;
+        }
     }
 
     public MoveInfo ChooseMove(Game game, Side side)
     {
         var possibleMoves = game.GetPossibleSideMoves(side);
-        if (!possibleMoves.Any())
+        if (possibleMoves.Count == 0)
         {
             game.Log($"No possible moves for {side} on board");
             game.Log(game.GetView());
             throw new ArgumentException("No possible moves");
+        }
+
+        var only1MovePossible = possibleMoves.Count == 1;
+        if (only1MovePossible)
+        {
+            return possibleMoves.First();
         }
         
         var oldBoard = game.GetBoard();
@@ -127,7 +169,7 @@ public class CheckersAi
         var possibleMoves = game.GetPossibleSideMoves(side);
         var oldBoard = game.GetBoard();
 
-        if (!possibleMoves.Any())
+        if (possibleMoves.Count <= 0)
         {
             return side switch
             {
@@ -137,7 +179,7 @@ public class CheckersAi
             };
         }
         
-        if (depth >= MaxDepth)
+        if (depth >= _maxDepth)
         {
             var noTakes = possibleMoves.First().MoveType == MoveInfo.Type.Move;
             if (noTakes)
@@ -181,8 +223,8 @@ public class CheckersAi
     {
         rating = default;
         
-        var minAnalyzedDepth = MaxDepth - depth;
-        if (!_ratedBoardStatesCached.TryGetValue(game.GetBoardHash(), out var ratedBoardState))
+        var minAnalyzedDepth = _maxDepth - depth;
+        if (!RatedBoardStatesCached.TryGetValue(game.GetBoardHash(), out var ratedBoardState))
         {
             return false;
         }
@@ -199,8 +241,8 @@ public class CheckersAi
 
     private void CacheResult(Game game, int depth, float moveRating)
     {
-        var analyzedDepth = MaxDepth - depth;
-        if (_ratedBoardStatesCached.TryGetValue(game.GetBoardHash(), out var ratedBoardState))
+        var analyzedDepth = _maxDepth - depth;
+        if (RatedBoardStatesCached.TryGetValue(game.GetBoardHash(), out var ratedBoardState))
         {
             if (analyzedDepth > ratedBoardState.AnalyzedDepth)
             {
@@ -214,7 +256,7 @@ public class CheckersAi
             ratedBoardState.AnalyzedDepth = analyzedDepth;
         }
 
-        _ratedBoardStatesCached[game.GetBoardHash()] = ratedBoardState;
+        RatedBoardStatesCached[game.GetBoardHash()] = ratedBoardState;
     }
 
     private int GetBestMoveIndex(in Span<float> possibleMoveRatings, Side side)

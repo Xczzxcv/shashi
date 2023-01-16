@@ -92,7 +92,7 @@ public struct SideState : IEquatable<SideState>
         return HasPiece(pos, KingsPartShift);
     }
 
-    private readonly bool HasPiece(Vec2Int pos, int shift)
+    private readonly bool HasPiece(in Vec2Int pos, int shift)
     {
         Debug.Assert(Board.IsBlackSquare(pos),
             $"[{nameof(SideState)}, {nameof(HasPiece)}] Pos: {pos}");
@@ -138,9 +138,14 @@ public struct SideState : IEquatable<SideState>
         return _state.ToString();
     }
 
-    public readonly List<Piece> GetPieces()
+    public readonly PiecesCollection GetPieces()
     {
-        var result = new List<Piece>();
+        PoolsHolder.GetPiecesCallsCount++;
+        PoolsHolder.GetPiecesSw.Start();
+        var resultPieces = PoolsHolder.PiecesCollectionPool.Get();
+        // var resultPieces = new PiecesCollection(INIT_CHECKERS_COUNT);
+        PoolsHolder.GetPiecesSw.Stop();
+
         for (int i = CheckersPartShift; i < KingsPartShift; i++)
         {
             if (!HasPieceAtBlackSquareIndex(i))
@@ -149,7 +154,7 @@ public struct SideState : IEquatable<SideState>
             }
 
             var piece = new Piece(Side, PieceRank.Checker, GetPos(i));
-            result.Add(piece);
+            resultPieces.Add(piece);
         }
 
         for (int i = KingsPartShift; i < WholeLength; i++)
@@ -160,10 +165,10 @@ public struct SideState : IEquatable<SideState>
             }
 
             var piece = new Piece(Side, PieceRank.King, GetPos(i));
-            result.Add(piece);
+            resultPieces.Add(piece);
         }
 
-        return result;
+        return resultPieces;
     }
 
     public void SetPiece(in Piece piece)

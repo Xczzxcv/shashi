@@ -8,18 +8,17 @@ public class RulesManager
     {
         var possibleMoves = new List<MoveInfo>();
         var pieces = board.GetPieces(side);
-        if (TryAddPossibleTakes(pieces, possibleMoves, board))
+        if (!TryAddPossibleTakes(pieces, possibleMoves, board))
         {
-            return possibleMoves;
+            AddPossibleMoves(board, pieces, possibleMoves);
         }
-        
-        AddPossibleMoves(board, pieces, possibleMoves);
+
+        pieces.ReturnToPool();
 
         return possibleMoves;
-
     }
 
-    private bool TryAddPossibleTakes(List<Piece> pieces, List<MoveInfo> possibleMoves, Board board)
+    private bool TryAddPossibleTakes(PiecesCollection pieces, List<MoveInfo> possibleMoves, Board board)
     {
         var possibleTakesCounter = 0;
         foreach (var piece in pieces)
@@ -46,9 +45,8 @@ public class RulesManager
     private int AddPossiblePieceTakes(List<MoveInfo> possibleMoves, Piece piece, Board board,
         bool noEnemiesMeansSuccess, Vec2Int[]? attackDirections = null)
     {
-        var enemyPieces = DetectedEnemyPieces(piece, board, attackDirections);
-
         var possibleTakesCounter = 0;
+        var enemyPieces = DetectedEnemyPieces(piece, board, attackDirections);
         foreach (var enemyPiece in enemyPieces)
         {
             if (_takenPiecesPositions.Contains(enemyPiece.Position))
@@ -72,6 +70,8 @@ public class RulesManager
             possibleMoves.Add(move);
             possibleTakesCounter++;
         }
+
+        enemyPieces.ReturnToPool();
 
         return possibleTakesCounter;
     }
@@ -148,7 +148,7 @@ public class RulesManager
             var attackDirections = new[] {oneDir, otherDir};
             var possibleMoves = new List<MoveInfo>();
             AddPossiblePieceTakes(possibleMoves, pieceAfterTake, board, false, attackDirections);
-            if (possibleMoves.Any())
+            if (possibleMoves.Count > 0)
             {
                 takeDestPositionsWithContinuation.Add(takeDestPos);
                 hasAnyContinuationTakes = true;
@@ -169,7 +169,7 @@ public class RulesManager
         return takeDestPositionsWithContinuation;
     }
 
-    private List<Piece> DetectedEnemyPieces(Piece piece, Board board, 
+    private PiecesCollection DetectedEnemyPieces(Piece piece, Board board, 
         Vec2Int[]? attackDirections = null)
     {
         var maxDetectRange = piece.Rank switch
@@ -181,7 +181,7 @@ public class RulesManager
 
         attackDirections ??= _defaultAttackDirections;
 
-        var detectedEnemyPieces = new List<Piece>();
+        var detectedEnemyPieces = PoolsHolder.PiecesCollectionPool.Get();
         foreach (var attackDirection in attackDirections)
         {
             for (int detectRange = 1; detectRange <= maxDetectRange; detectRange++)
@@ -218,7 +218,7 @@ public class RulesManager
     {
         _takenPiecesPositions.Add(checkedEnemyPiece.Position);
         var possibleTakeDestPositions = GetPossibleTakeDestPositions(piece, checkedEnemyPiece, board);
-        if (!possibleTakeDestPositions.Any())
+        if (possibleTakeDestPositions.Count == 0)
         {
             _takenPiecesPositions.Remove(checkedEnemyPiece.Position);
             return 0;
@@ -264,7 +264,7 @@ public class RulesManager
         // board.SetSquareContent(enemyPiece);
     }
 
-    private void AddPossibleMoves(Board board, List<Piece> pieces, List<MoveInfo> possibleMoves)
+    private void AddPossibleMoves(Board board, PiecesCollection pieces, List<MoveInfo> possibleMoves)
     {
         foreach (var piece in pieces)
         {
@@ -354,5 +354,24 @@ public class RulesManager
             _ => piece.Rank
         };
         return pieceRank;
+    }
+
+    public GameState GetGameState(Board board)
+    {
+        var whitePossibleMoves = GetPossibleSideMoves(Side.White, board);
+        var whitePossibleMovesCount = whitePossibleMoves.Count;
+        if (whitePossibleMovesCount == 0)
+        {
+            return GameState.BlackWon;
+        }
+
+        var blackPossibleMoves = GetPossibleSideMoves(Side.Black, board);
+        var blackPossibleMovesCount = blackPossibleMoves.Count;
+        if (blackPossibleMovesCount == 0)
+        {
+            return GameState.WhiteWon;
+        }
+
+        return GameState.GameBeingPlayed;
     }
 }

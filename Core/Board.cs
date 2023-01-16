@@ -29,7 +29,7 @@ public partial struct Board : IEquatable<Board>
         return initState;
     }
 
-    public readonly List<Piece> GetPieces(Side side)
+    public readonly PiecesCollection GetPieces(Side side)
     {
         var piecesSrc = GetSideStateCopy(side);
         return piecesSrc.GetPieces();

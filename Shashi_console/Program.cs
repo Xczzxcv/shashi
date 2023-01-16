@@ -1,16 +1,75 @@
-﻿using Core;
+﻿using System.Diagnostics;
+using Core;
 
 namespace Shashi_console;
 
 public static class Program
 {
-    public static void Main()
+    public static async Task Main()
     {
-        var game = new Game(new ConsoleLogger());
+        var consolePlayer = new ConsolePlayer();
+        var game = new Game(null, null, new ConsoleLogger());
         game.Init();
+
+        // SetCustomPos(game);
+        const int repeatsAmount = 5;
+        var gameDurations = new double[5];
+        for (int i = 0; i < repeatsAmount; i++)
+        {
+            var sw = Stopwatch.StartNew();
+            await SimulateGame(game);
+            gameDurations[i] = sw.ElapsedMilliseconds;
+            
+            game.SetGameState(Board.Initial(), Side.White);
+        }
+
+        var averageGameDuration = gameDurations.Average();
+        var gameDurationsString = string.Join(", ", gameDurations);
+
+
+        Console.WriteLine($"Pool stat: size {PoolsHolder.PiecesCollectionPool.CurrentSize}\n" +
+                          $"free {PoolsHolder.PiecesCollectionPool.FreeTakenCounter} " +
+                          $"spawned {PoolsHolder.PiecesCollectionPool.SpawnedTakenCounter}\n" +
+                          $"current: free {PoolsHolder.PiecesCollectionPool.CurrentFreeCount} " +
+                          $"rented {PoolsHolder.PiecesCollectionPool.CurrentRentedCount}");
+        Console.WriteLine($"Get pieces stat: duration {PoolsHolder.GetPiecesSw.Elapsed} " +
+                          $"calls counter {PoolsHolder.GetPiecesCallsCount} " +
+                          $"avg call duration {PoolsHolder.GetPiecesSw.Elapsed / PoolsHolder.GetPiecesCallsCount}");
+        Console.WriteLine($"There were {repeatsAmount} tries of playing the game. " +
+                          $"It average duration is {averageGameDuration} ({gameDurationsString})");
+    }
+
+    private static void SetCustomPos(Game game)
+    {
+        const string boardStateString = @"
+8|█░█░█░█░
+7|░█░█░█*█
+4|█░█░█░█░
+5|░█*█░█*█
+4|█░█*█░█░
+3|░█░█░█*█
+2|█*█*█░█0
+1|░█░█░█░█
+  ABCDEFGH
+";
+        var loadedBoard = Board.Empty();
+        loadedBoard.SetState(boardStateString);
+        game.SetGameState(loadedBoard, Side.White);
+    }
+
+    private static async Task SimulateGame(Game game)
+    {
+        Console.WriteLine(game.GetView());
         
-        SetCustomPos(game);
-        SimulateGame(game);
+        const int MOVES_COUNT = 100;
+        for (int i = 0; i < MOVES_COUNT && game.IsGameBeingPlayed; i++)
+        {
+            var currTurnSide = game.CurrTurnSide;
+            var (chosenMove, gameState) = await game.MakeMove();
+            Console.WriteLine($"{currTurnSide} chose {chosenMove}");
+            Console.WriteLine($"After this move game state: {gameState}");
+            Console.WriteLine(game.GetView());
+        }
     }
 
     private static void ShowPossibleMoves(Game game)
@@ -20,41 +79,5 @@ public static class Program
             "Possible moves:\n" +
             string.Join(",\n", possibleMoves)
         );
-    }
-
-    private static void SetCustomPos(Game game)
-    {
-        const string boardStateString = @"
-8|█*█*█░█*
-7|*█*█*█░█
-6|█░█░█░█░
-5|0█░█0█*█
-4|█░█░█░█░
-3|0█*█░█0█
-2|█░█░█0█0
-1|░█0█0█░█
-  ABCDEFGH
-";
-        var loadedBoard = Board.Empty();
-        loadedBoard.SetState(boardStateString);
-        game.SetGameState(loadedBoard, Side.White);
-    }
-
-    private static void SimulateGame(Game game)
-    {
-        var ai = new CheckersAi();
-
-        Console.WriteLine(game.GetView());
-        
-        const int MOVES_COUNT = 1;
-        for (int i = 0; i < MOVES_COUNT; i++)
-        {
-            ShowPossibleMoves(game);
-            var chosenMove = ai.ChooseMove(game, game.CurrTurnSide);
-            Console.WriteLine($"AI chose move {chosenMove}");
-            game.MakeMove(chosenMove);
-            Console.WriteLine($"After this move I rate this position as {ai.RatePosition(game.GetBoard())}");
-            Console.WriteLine(game.GetView());
-        }
     }
 }
