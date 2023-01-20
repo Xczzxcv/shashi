@@ -18,7 +18,7 @@ public struct Vec2Int : IEquatable<Vec2Int>
 
     public override int GetHashCode()
     {
-        return HashCode.Combine(X, Y);
+        return HashCodeHelper.Get(X, Y);
     }
 
     public bool Equals(Vec2Int other)

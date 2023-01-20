@@ -2,7 +2,7 @@
 
 namespace Core;
 
-public static class HashsetHelper
+public static class HashsetExt
 {
     public static T GetAny<T>(this HashSet<T> hashSet)
     {

@@ -1,36 +1,84 @@
-﻿namespace Core;
+﻿using System.Text.Json.Serialization;
 
-public class Game
+namespace Core;
+
+public class Game : IDisposable
 {
-    private readonly RulesManager _rulesManager;
-    private readonly LogManager _logManager;
-    private Board _board;
+    [Serializable]
+    public struct Config
+    {
+        [JsonInclude, JsonPropertyName("board")]
+        public Board.Config BoardConfig;
+        [JsonInclude, JsonPropertyName("ai")]
+        public CheckersAi.Config AiConfig;
+    }
+
     public Side CurrTurnSide { get; private set; }
     public bool IsGameBeingPlayed => _currentGameState == GameState.GameBeingPlayed;
 
+    private readonly RulesManager _rulesManager;
+    private readonly LogManager _logManager;
     private readonly Player _whitesPlayer;
     private readonly Player _blacksPlayer;
+    private readonly CheckersAi _ai;
+
+    private Board _board;
     private GameState _currentGameState;
+    private Config _config;
 
     public Game(Player? whitesPlayer, Player? blacksPlayer, ILogger? logger = null)
     {
         _currentGameState = GameState.GameBeingPlayed;
         _rulesManager = new RulesManager();
+
+        _ai = new CheckersAi();
         
-        _whitesPlayer = whitesPlayer ?? new BotPlayer();
-        _blacksPlayer = blacksPlayer ?? new BotPlayer();
+        _whitesPlayer = whitesPlayer ?? new BotPlayer(_ai);
+        _blacksPlayer = blacksPlayer ?? new BotPlayer(_ai);
 
         _logManager = new LogManager();
         _logManager.Setup(logger);
     }
     
-    public void Init()
+    public void Init(Config? config = null)
     {
-        _board = Board.Initial();
-        CurrTurnSide = Side.White;
+        LoadConfig(config);
+        _ai.Init(_config.AiConfig);
+        InitBoard();
+        CurrTurnSide = _config.BoardConfig.UseCustomInitBoardState
+            ? _config.BoardConfig.CurrentTurnSide
+            : Side.White;
     }
 
-    public List<MoveInfo> GetPossibleSideMoves(Side side)
+    private void LoadConfig(Config? config)
+    {
+        _config = config ?? SerializationManager.LoadGameConfig();
+    }
+
+    private void InitBoard()
+    {
+        if (!_config.BoardConfig.UseCustomInitBoardState)
+        {
+            _board = Board.Initial();
+            return;
+        }
+
+        _board = Board.Empty();
+        var boardConfigImgStrings = _config.BoardConfig.BoardImgStateStrings;
+        var hasBoardImgStr = boardConfigImgStrings?.Length > 0;
+        if (hasBoardImgStr)
+        {
+            _board.SetState(string.Join(string.Empty, boardConfigImgStrings));
+            return;
+        }
+
+        _board.SetState(
+            _config.BoardConfig.WhiteSideState,
+            _config.BoardConfig.BlackSideState
+        );
+    }
+
+    public MovesCollection GetPossibleSideMoves(Side side)
     {
         return _rulesManager.GetPossibleSideMoves(side, _board);
     }
@@ -51,7 +99,7 @@ public class Game
 
     private void UpdateCurrentGameState()
     {
-        _currentGameState = _rulesManager.GetGameState(_board);
+        _currentGameState = _rulesManager.GetGameState(_board, CurrTurnSide);
     }
 
     private Player GetCurrentPlayer()
@@ -169,12 +217,14 @@ public class Game
     {
         _logManager.Log(logMessage);
     }
-}
 
-public enum GameState
-{
-    None,
-    GameBeingPlayed,
-    WhiteWon,
-    BlackWon,
+    public float RateCurrentPos()
+    {
+        return _ai.RatePosition(_board);
+    }
+
+    public void Dispose()
+    {
+        _ai.Dispose();
+    }
 }

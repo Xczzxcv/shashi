@@ -1,6 +1,6 @@
 ﻿namespace Core;
 
-public struct MoveInfo : IPoolable
+public struct MoveInfo
 {
     public enum Type
     {
@@ -9,9 +9,6 @@ public struct MoveInfo : IPoolable
         Take
     }
     
-    public int Id { get; private set; }
-    private IPool? _parentPool;
-
     public Type MoveType;
     public Move Move;
     public List<Take> Takes;
@@ -59,17 +56,6 @@ public struct MoveInfo : IPoolable
         }
 
         return $"{MoveType}: {infoString}";
-    }
-
-    public void Setup(int id, IPool parentPool)
-    {
-        Id = id;
-        _parentPool = parentPool;
-    }
-
-    public void ReturnToPool()
-    {
-        _parentPool?.Return(this);
     }
 
     public void Reset()

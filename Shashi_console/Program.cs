@@ -11,7 +11,6 @@ public static class Program
         var game = new Game(null, null, new ConsoleLogger());
         game.Init();
 
-        // SetCustomPos(game);
         const int repeatsAmount = 5;
         var gameDurations = new double[5];
         for (int i = 0; i < repeatsAmount; i++)
@@ -19,7 +18,7 @@ public static class Program
             var sw = Stopwatch.StartNew();
             await SimulateGame(game);
             gameDurations[i] = sw.ElapsedMilliseconds;
-            
+
             game.SetGameState(Board.Initial(), Side.White);
         }
 
@@ -27,7 +26,12 @@ public static class Program
         var gameDurationsString = string.Join(", ", gameDurations);
 
 
-        Console.WriteLine($"Pool stat: size {PoolsHolder.PiecesCollectionPool.CurrentSize}\n" +
+        Console.WriteLine($"Moves Pool stat: size {PoolsHolder.MovesCollectionPool.CurrentSize}\n" +
+                          $"free {PoolsHolder.MovesCollectionPool.FreeTakenCounter} " +
+                          $"spawned {PoolsHolder.MovesCollectionPool.SpawnedTakenCounter}\n" +
+                          $"current: free {PoolsHolder.MovesCollectionPool.CurrentFreeCount} " +
+                          $"rented {PoolsHolder.MovesCollectionPool.CurrentRentedCount}");
+        Console.WriteLine($"Pieces Pool stat: size {PoolsHolder.PiecesCollectionPool.CurrentSize}\n" +
                           $"free {PoolsHolder.PiecesCollectionPool.FreeTakenCounter} " +
                           $"spawned {PoolsHolder.PiecesCollectionPool.SpawnedTakenCounter}\n" +
                           $"current: free {PoolsHolder.PiecesCollectionPool.CurrentFreeCount} " +
@@ -37,38 +41,22 @@ public static class Program
                           $"avg call duration {PoolsHolder.GetPiecesSw.Elapsed / PoolsHolder.GetPiecesCallsCount}");
         Console.WriteLine($"There were {repeatsAmount} tries of playing the game. " +
                           $"It average duration is {averageGameDuration} ({gameDurationsString})");
-    }
-
-    private static void SetCustomPos(Game game)
-    {
-        const string boardStateString = @"
-8|█░█░█░█░
-7|░█░█░█*█
-4|█░█░█░█░
-5|░█*█░█*█
-4|█░█*█░█░
-3|░█░█░█*█
-2|█*█*█░█0
-1|░█░█░█░█
-  ABCDEFGH
-";
-        var loadedBoard = Board.Empty();
-        loadedBoard.SetState(boardStateString);
-        game.SetGameState(loadedBoard, Side.White);
+        game.Dispose();
     }
 
     private static async Task SimulateGame(Game game)
     {
         Console.WriteLine(game.GetView());
-        
-        const int MOVES_COUNT = 100;
-        for (int i = 0; i < MOVES_COUNT && game.IsGameBeingPlayed; i++)
+
+        var turnsCounter = 0;
+        while (game.IsGameBeingPlayed && turnsCounter < 300)
         {
             var currTurnSide = game.CurrTurnSide;
             var (chosenMove, gameState) = await game.MakeMove();
             Console.WriteLine($"{currTurnSide} chose {chosenMove}");
             Console.WriteLine($"After this move game state: {gameState}");
             Console.WriteLine(game.GetView());
+            turnsCounter++;
         }
     }
 
@@ -79,5 +67,6 @@ public static class Program
             "Possible moves:\n" +
             string.Join(",\n", possibleMoves)
         );
+        possibleMoves.ReturnToPool();
     }
 }

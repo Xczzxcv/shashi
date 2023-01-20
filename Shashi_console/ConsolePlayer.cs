@@ -22,14 +22,18 @@ public class ConsolePlayer : Player
         {
             var chosenMoveIndString = Console.ReadLine();
             var canParseMoveIndex = int.TryParse(chosenMoveIndString, out chosenMoveInd);
-            var isValidMoveIndex = IsValidMoveIndex(chosenMoveInd);
+            var isValidMoveIndex = IsValidMoveIndex(chosenMoveInd, possibleMoves);
             isMoveIndexValid = canParseMoveIndex && isValidMoveIndex;
         } while (!isMoveIndexValid);
-        return Task.FromResult(possibleMoves[chosenMoveInd]);
 
-        bool IsValidMoveIndex(int moveInd)
-        {
-            return 0 <= moveInd && moveInd < possibleMoves.Count;
-        }
+        var chosenMove = possibleMoves[chosenMoveInd];
+        possibleMoves.ReturnToPool();
+
+        return Task.FromResult(chosenMove);
+    }
+
+    private static bool IsValidMoveIndex(int moveInd, MovesCollection possibleMoves)
+    {
+        return 0 <= moveInd && moveInd < possibleMoves.Count;
     }
 }

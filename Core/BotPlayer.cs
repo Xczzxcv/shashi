@@ -2,12 +2,11 @@
 
 public class BotPlayer : Player
 {
-    private const int MaxDepth = 6;
     private readonly CheckersAi _ai;
 
-    public BotPlayer()
+    public BotPlayer(CheckersAi ai)
     {
-        _ai = new CheckersAi(MaxDepth);
+        _ai = ai;
     }
 
     public override async Task<MoveInfo> ChooseMove(Game game, Side side)

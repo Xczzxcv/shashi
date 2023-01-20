@@ -4,9 +4,9 @@ namespace Core;
 
 public class RulesManager
 {
-    public List<MoveInfo> GetPossibleSideMoves(Side side, Board board)
+    public MovesCollection GetPossibleSideMoves(Side side, Board board)
     {
-        var possibleMoves = new List<MoveInfo>();
+        var possibleMoves = PoolsHolder.MovesCollectionPool.Get();
         var pieces = board.GetPieces(side);
         if (!TryAddPossibleTakes(pieces, possibleMoves, board))
         {
@@ -18,7 +18,7 @@ public class RulesManager
         return possibleMoves;
     }
 
-    private bool TryAddPossibleTakes(PiecesCollection pieces, List<MoveInfo> possibleMoves, Board board)
+    private bool TryAddPossibleTakes(PiecesCollection pieces, MovesCollection possibleMoves, Board board)
     {
         var possibleTakesCounter = 0;
         foreach (var piece in pieces)
@@ -38,11 +38,10 @@ public class RulesManager
         new(1, 1),
         new(-1, 1)
     };
-
     private readonly Vec2Int[] _moveDirections = DiagonalDirections;
     private readonly Vec2Int[] _defaultAttackDirections = DiagonalDirections;
 
-    private int AddPossiblePieceTakes(List<MoveInfo> possibleMoves, Piece piece, Board board,
+    private int AddPossiblePieceTakes(MovesCollection possibleMoves, Piece piece, Board board,
         bool noEnemiesMeansSuccess, Vec2Int[]? attackDirections = null)
     {
         var possibleTakesCounter = 0;
@@ -146,9 +145,12 @@ public class RulesManager
             var oneDir = new Vec2Int(attackDirection.X * -1, attackDirection.Y);
             var otherDir = new Vec2Int(attackDirection.X, attackDirection.Y * -1);
             var attackDirections = new[] {oneDir, otherDir};
-            var possibleMoves = new List<MoveInfo>();
+            var possibleMoves = PoolsHolder.MovesCollectionPool.Get();
             AddPossiblePieceTakes(possibleMoves, pieceAfterTake, board, false, attackDirections);
-            if (possibleMoves.Count > 0)
+            var possibleMovesCount = possibleMoves.Count;
+            possibleMoves.ReturnToPool();            
+            
+            if (possibleMovesCount > 0)
             {
                 takeDestPositionsWithContinuation.Add(takeDestPos);
                 hasAnyContinuationTakes = true;
@@ -213,7 +215,7 @@ public class RulesManager
     private readonly HashSet<Vec2Int> _takenPiecesPositions = new();
     private readonly List<Take> _takesDone = new();
 
-    private int AddPossiblePieceToPieceTakes(List<MoveInfo> possibleMoves, Piece piece, 
+    private int AddPossiblePieceToPieceTakes(MovesCollection possibleMoves, Piece piece, 
         Piece checkedEnemyPiece, Board board)
     {
         _takenPiecesPositions.Add(checkedEnemyPiece.Position);
@@ -264,7 +266,7 @@ public class RulesManager
         // board.SetSquareContent(enemyPiece);
     }
 
-    private void AddPossibleMoves(Board board, PiecesCollection pieces, List<MoveInfo> possibleMoves)
+    private void AddPossibleMoves(Board board, PiecesCollection pieces, MovesCollection possibleMoves)
     {
         foreach (var piece in pieces)
         {
@@ -272,7 +274,7 @@ public class RulesManager
         }
     }
 
-    private void AddPossiblePieceMoves(Piece piece, List<MoveInfo> possibleMoves, Board board)
+    private void AddPossiblePieceMoves(Piece piece, MovesCollection possibleMoves, Board board)
     {
         var maxMoveRange = piece.Rank switch
         {
@@ -356,18 +358,24 @@ public class RulesManager
         return pieceRank;
     }
 
-    public GameState GetGameState(Board board)
+    public GameState GetGameState(Board board, Side currTurnSide)
     {
         var whitePossibleMoves = GetPossibleSideMoves(Side.White, board);
         var whitePossibleMovesCount = whitePossibleMoves.Count;
-        if (whitePossibleMovesCount == 0)
+        whitePossibleMoves.ReturnToPool();
+
+        if (whitePossibleMovesCount == 0
+            && currTurnSide == Side.White)
         {
             return GameState.BlackWon;
         }
 
         var blackPossibleMoves = GetPossibleSideMoves(Side.Black, board);
         var blackPossibleMovesCount = blackPossibleMoves.Count;
-        if (blackPossibleMovesCount == 0)
+        blackPossibleMoves.ReturnToPool();
+
+        if (blackPossibleMovesCount == 0
+            && currTurnSide == Side.Black)
         {
             return GameState.WhiteWon;
         }

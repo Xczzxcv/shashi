@@ -2,6 +2,12 @@
 
 public partial struct Board
 {
+    public void SetState(ulong whitesState, ulong blacksState)
+    {
+        _white.SetState(whitesState);
+        _black.SetState(blacksState);
+    }
+
     private static bool TryGetSquareContent(char squareInfo, out SquareState squareState)
     {
         switch (squareInfo)

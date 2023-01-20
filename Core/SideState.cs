@@ -13,15 +13,21 @@ public struct SideState : IEquatable<SideState>
     private const int KingsPartShift = CheckersPartShift + PartLength;
     public const int INIT_CHECKERS_COUNT = Constants.BLACK_SQUARE_ROW_AMOUNT * (Constants.BOARD_SIZE / 2 - 1);
 
-    private SideState(Side side)
+    private SideState(Side side, ulong sideState = default)
     {
         Side = side;
-        _state = default;
+        _state = sideState;
     }
 
     public static SideState Empty(Side side)
     {
         var initState = new SideState(side);
+        return initState;
+    }
+
+    public static SideState State(Side side, ulong sideState)
+    {
+        var initState = new SideState(side, sideState);
         return initState;
     }
 
@@ -101,7 +107,7 @@ public struct SideState : IEquatable<SideState>
         return HasPieceAtBlackSquareIndex(blackSquareBitIndex + shift);
     }
 
-    private static int GetBlackSquareBitIndex(Vec2Int pos)
+    public static int GetBlackSquareBitIndex(Vec2Int pos)
     {
         var blackSquareBitIndex = pos.Y * Constants.BLACK_SQUARE_ROW_AMOUNT
                                   + pos.X / Constants.BLACK_SQUARE_ROW_SHARE;
@@ -196,6 +202,11 @@ public struct SideState : IEquatable<SideState>
         SetBitAtIndex(initialBitShift + blackSquareBitIndex, pieceStatus);
     }
 
+    public void SetState(ulong sideState)
+    {
+        _state = sideState;
+    }
+
     public bool Equals(SideState other)
     {
         return Side == other.Side && _state == other._state;
@@ -203,6 +214,11 @@ public struct SideState : IEquatable<SideState>
 
     public override int GetHashCode()
     {
-        return HashCode.Combine((int) Side, _state);
+        return HashCodeHelper.Get((int) Side, _state);
+    }
+
+    public ulong GetSerialization()
+    {
+        return _state;
     }
 }

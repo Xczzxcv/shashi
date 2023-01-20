@@ -29,6 +29,17 @@ public partial struct Board : IEquatable<Board>
         return initState;
     }
 
+    public static Board State(ulong whitesState, ulong blacksState)
+    {
+        var customState = new Board
+        {
+            _white = SideState.State(Side.White, whitesState),
+            _black = SideState.State(Side.Black, blacksState),
+        };
+
+        return customState;
+    }
+
     public readonly PiecesCollection GetPieces(Side side)
     {
         var piecesSrc = GetSideStateCopy(side);
@@ -113,7 +124,7 @@ public partial struct Board : IEquatable<Board>
 
     public override int GetHashCode()
     {
-        return HashCode.Combine(_white, _black);
+        return HashCodeHelper.Get(_white.GetHashCode(), _black);
     }
 
     public static bool TryGetPiece(SquareState squareState, Vec2Int pos, out Piece piece)
