@@ -1,4 +1,5 @@
-﻿using System.Text.Json.Serialization;
+﻿using System.Diagnostics;
+using System.Text.Json.Serialization;
 
 namespace Core;
 
@@ -42,6 +43,7 @@ public class CheckersAi : IDisposable
     public void Init(Config config)
     {
         _config = config;
+        Console.WriteLine($"[{nameof(CheckersAi)}] Init: depth={_config.MaxDepth}");
         InitPositionsCache();
     }
 
@@ -137,7 +139,7 @@ public class CheckersAi : IDisposable
             throw new ArgumentException("No possible moves");
         }
 
-        MoveInfo chosenMove;
+        MoveInfo chosenMove = default;
         var only1MovePossible = possibleMoves.Count == 1;
         if (only1MovePossible)
         {
@@ -145,29 +147,42 @@ public class CheckersAi : IDisposable
             possibleMoves.ReturnToPool();
             return chosenMove;
         }
-        
+
+        var bestMoveRating = SetupBestMoveRating(side);
+        var updateBestMoveScoreFunc = SetupUpdateBestMoveScoreFunc(side);
+
         var oldBoard = game.GetBoard();
-        Span<float> possibleMoveRatings = stackalloc float[possibleMoves.Count];
+        var alpha = float.NegativeInfinity;
+        var beta = float.PositiveInfinity;
+        const int depth = 0;
+
         game.Log($"{side} have {possibleMoves.Count} moves. Their rates are:\n");
         for (var moveInd = 0; moveInd < possibleMoves.Count; moveInd++)
         {
+            var oldBestMoveRating = bestMoveRating;
             var possibleMove = possibleMoves[moveInd];
-            game.MakeMove(possibleMove);
-            var moveRating = MinMax(game, Game.GetOppositeSide(side), 0);
-            possibleMoveRatings[moveInd] = moveRating;
-            game.SetGameState(oldBoard, side);
-            game.Log($"{moveInd}) {possibleMove} — {moveRating}\n");
+            var isCurrentlyBestMove = EvaluateMove(game, side, ref alpha, ref beta, ref bestMoveRating, depth,
+                possibleMove, oldBoard, updateBestMoveScoreFunc);
+            if (isCurrentlyBestMove)
+            {
+                chosenMove = possibleMove;
+            }
+
+            game.Log($"{moveInd}) {possibleMove} — {oldBestMoveRating} —> {bestMoveRating}\n");
+            if (TryPrune(alpha, beta))
+            {
+                game.Log("There is prune can be done");
+                break;
+            }
         }
-        
-        var bestMoveIndex = GetBestMoveIndex(in possibleMoveRatings, side);
-        chosenMove = possibleMoves[bestMoveIndex];
 
         possibleMoves.ReturnToPool();
 
+        Debug.Assert(!chosenMove.Equals(default));
         return chosenMove;
     }
 
-    private float MinMax(Game game, Side side, int depth)
+    private float MinMax(Game game, Side side, float alpha, float beta, int depth)
     {
         if (TryUseCachedResult(game, depth, out var rating))
         {
@@ -187,7 +202,7 @@ public class CheckersAi : IDisposable
                 _ => throw new NotImplementedException($"Unknown turn side value {side}")
             };
         }
-        
+
         if (depth >= _config.MaxDepth)
         {
             var noTakes = possibleMoves.First().MoveType == MoveInfo.Type.Move;
@@ -198,23 +213,104 @@ public class CheckersAi : IDisposable
             }
         }
 
-        Span<float> possibleMoveRatings = stackalloc float[possibleMoves.Count];
-        for (var moveInd = 0; moveInd < possibleMoves.Count; moveInd++)
+        var updateBestMoveScoreFunc = SetupUpdateBestMoveScoreFunc(side);
+        var bestMoveRating = SetupBestMoveRating(side);
+
+        foreach (var possibleMove in possibleMoves)
         {
-            var possibleMove = possibleMoves[moveInd];
-            game.MakeMove(possibleMove);
-            var moveRating = MinMax(game, Game.GetOppositeSide(side), depth + 1);
-            possibleMoveRatings[moveInd] = moveRating;
-            CacheResult(game, depth, moveRating);
-            game.SetGameState(oldBoard, side);
+            EvaluateMove(game, side, ref alpha, ref beta, ref bestMoveRating, depth, possibleMove,
+                oldBoard, updateBestMoveScoreFunc);
+
+            if (TryPrune(alpha, beta))
+            {
+                break;
+            }
         }
         
-        var bestMoveIndex = GetBestMoveIndex(in possibleMoveRatings, side);
-        var bestMoveRating = possibleMoveRatings[bestMoveIndex];
-
         possibleMoves.ReturnToPool();
 
         return bestMoveRating;
+    }
+
+    private static bool TryPrune(float alpha, float beta)
+    {
+        // pruning is here
+        var isPruneCanBeDone = alpha >= beta;
+        if (isPruneCanBeDone)
+        {
+            return true;
+        }
+
+        return false;
+    }
+
+    private static float SetupBestMoveRating(Side side)
+    {
+        var bestMoveRating = side switch
+        {
+            Side.White => float.NegativeInfinity,
+            Side.Black => float.PositiveInfinity,
+            _ => throw new ArgumentException($"Unknown side value {side}")
+        };
+        return bestMoveRating;
+    }
+
+    private UpdateBestMoveScoreFunc SetupUpdateBestMoveScoreFunc(Side side)
+    {
+        var updateBestMoveScoreFunc = side switch
+        {
+            Side.White => _updateBestWhitesScoreFunc,
+            Side.Black => _updateBestBlacksScoreFunc,
+            _ => throw new ArgumentException($"Unknown side value {side}")
+        };
+        return updateBestMoveScoreFunc;
+    }
+
+    private bool EvaluateMove(Game game, Side side, ref float alpha, ref float beta, ref float bestMoveRating,
+        int depth, MoveInfo possibleMove, Board oldBoard, UpdateBestMoveScoreFunc updateBestMoveScoreFunc)
+    {
+        game.MakeMove(possibleMove);
+        var moveRating = MinMax(game, Game.GetOppositeSide(side), alpha, beta, depth + 1);
+        CacheResult(game, depth, moveRating);
+        game.SetGameState(oldBoard, side);
+
+        return updateBestMoveScoreFunc(moveRating, ref bestMoveRating, ref alpha, ref beta);
+    }
+
+    private delegate bool UpdateBestMoveScoreFunc(float currentMoveRating, ref float bestMoveRating, ref float alpha, ref float beta);
+    private readonly UpdateBestMoveScoreFunc _updateBestWhitesScoreFunc = UpdateBestWhitesScore;
+    private readonly UpdateBestMoveScoreFunc _updateBestBlacksScoreFunc = UpdateBestBlacksScore;
+
+    private static bool UpdateBestWhitesScore(float currentMoveRating, ref float bestMoveRating, ref float alpha, ref float beta)
+    {
+        if (currentMoveRating <= bestMoveRating)
+        {
+            return false;
+        }
+
+        bestMoveRating = currentMoveRating;
+        if (bestMoveRating > alpha)
+        {
+            alpha = currentMoveRating;
+        }
+
+        return true;
+    }
+
+    private static bool UpdateBestBlacksScore(float currentMoveRating, ref float bestMoveRating, ref float alpha, ref float beta)
+    {
+        if (currentMoveRating >= bestMoveRating)
+        {
+            return false;
+        }
+
+        bestMoveRating = currentMoveRating;
+        if (bestMoveRating < beta)
+        {
+            beta = currentMoveRating;
+        }
+
+        return true;
     }
 
     private bool TryUseCachedResult(Game game, int depth, out float rating)

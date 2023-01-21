@@ -8,10 +8,10 @@ public static class Program
     public static async Task Main()
     {
         var consolePlayer = new ConsolePlayer();
-        var game = new Game(null, null, new ConsoleLogger());
+        var game = new Game(consolePlayer, null, new ConsoleLogger());
         game.Init();
 
-        const int repeatsAmount = 5;
+        const int repeatsAmount = 1;
         var gameDurations = new double[5];
         for (int i = 0; i < repeatsAmount; i++)
         {
