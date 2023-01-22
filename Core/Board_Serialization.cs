@@ -10,8 +10,8 @@ public partial struct Board
     {
         [JsonInclude, JsonPropertyName("use_custom")]
         public bool UseCustomInitBoardState;
-        [JsonInclude, JsonPropertyName("current_turn_side"), JsonConverter(typeof(JsonStringEnumConverter))]
-        public Side CurrentTurnSide;
+        [JsonInclude, JsonPropertyName("current_move_side"), JsonConverter(typeof(JsonStringEnumConverter))]
+        public Side CurrentMoveSide;
         [JsonInclude, JsonPropertyName("board_state")]
         public string[]? BoardImgStateStrings;
         [JsonInclude, JsonPropertyName("white_side")]

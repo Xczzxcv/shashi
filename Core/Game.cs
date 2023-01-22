@@ -13,23 +13,27 @@ public class Game : IDisposable
         public CheckersAi.Config AiConfig;
     }
 
-    public Side CurrTurnSide { get; private set; }
-    public bool IsGameBeingPlayed => _currentGameState == GameState.GameBeingPlayed;
+    public Side CurrMoveSide { get; private set; }
+    public bool IsGameBeingPlayed => _gameStateManager.State == GameState.GameBeingPlayed;
 
     private readonly RulesManager _rulesManager;
     private readonly LogManager _logManager;
     private readonly Player _whitesPlayer;
     private readonly Player _blacksPlayer;
     private readonly CheckersAi _ai;
+    private readonly GameStateManager _gameStateManager;
+    private readonly List<Board> _playedBoards = new();
+    private readonly List<MoveInfo> _madeMoves = new();
 
     private Board _board;
-    private GameState _currentGameState;
     private Config _config;
+    private int _moveIndex;
+    public int CurrentTurnIndex => _moveIndex / 2;
 
     public Game(Player? whitesPlayer, Player? blacksPlayer, ILogger? logger = null)
     {
-        _currentGameState = GameState.GameBeingPlayed;
         _rulesManager = new RulesManager();
+        _gameStateManager = new GameStateManager(this, _rulesManager);
 
         _ai = new CheckersAi();
         
@@ -42,20 +46,18 @@ public class Game : IDisposable
     
     public void Init(Config? config = null)
     {
-        LoadConfig(config);
+        SetupConfig(config);
         _ai.Init(_config.AiConfig);
-        InitBoard();
-        CurrTurnSide = _config.BoardConfig.UseCustomInitBoardState
-            ? _config.BoardConfig.CurrentTurnSide
-            : Side.White;
+        SetupBoard();
+        SetupSide();
     }
 
-    private void LoadConfig(Config? config)
+    private void SetupConfig(Config? config)
     {
         _config = config ?? SerializationManager.LoadGameConfig();
     }
 
-    private void InitBoard()
+    private void SetupBoard()
     {
         if (!_config.BoardConfig.UseCustomInitBoardState)
         {
@@ -78,6 +80,13 @@ public class Game : IDisposable
         );
     }
 
+    private void SetupSide()
+    {
+        CurrMoveSide = _config.BoardConfig.UseCustomInitBoardState
+            ? _config.BoardConfig.CurrentMoveSide
+            : Side.White;
+    }
+
     public MovesCollection GetPossibleSideMoves(Side side)
     {
         return _rulesManager.GetPossibleSideMoves(side, _board);
@@ -85,35 +94,32 @@ public class Game : IDisposable
 
     public async Task<(MoveInfo, GameState)> MakeMove()
     {
-        if (_currentGameState != GameState.GameBeingPlayed)
+        if (_gameStateManager.State != GameState.GameBeingPlayed)
         {
-            return (default, _currentGameState);
+            return (default, _gameStateManager.State);
         }
 
         var currentPlayer = GetCurrentPlayer();
-        var chosenMove = await currentPlayer.ChooseMove(this, CurrTurnSide);
+        var chosenMove = await currentPlayer.ChooseMove(this, CurrMoveSide);
         MakeMove(chosenMove);
-        UpdateCurrentGameState();
-        return (chosenMove, _currentGameState);
-    }
-
-    private void UpdateCurrentGameState()
-    {
-        _currentGameState = _rulesManager.GetGameState(_board, CurrTurnSide);
+        _gameStateManager.UpdateState();
+        return (chosenMove, _gameStateManager.State);
     }
 
     private Player GetCurrentPlayer()
     {
-        return CurrTurnSide switch
+        return CurrMoveSide switch
         {
             Side.White => _whitesPlayer,
             Side.Black => _blacksPlayer,
-            _ => throw new ArgumentException($"Unknown side value {CurrTurnSide}")
+            _ => throw new ArgumentException($"Unknown side value {CurrMoveSide}")
         };
     }
 
     public void MakeMove(MoveInfo move)
     {
+        _playedBoards.Add(_board);
+        _madeMoves.Add(move);
         switch (move.MoveType)
         {
             case MoveInfo.Type.Move:
@@ -127,11 +133,12 @@ public class Game : IDisposable
         }
 
         FlipTurn();
+        _moveIndex++;
     }
 
     private void FlipTurn()
     {
-        CurrTurnSide = GetOppositeSide(CurrTurnSide);
+        CurrMoveSide = GetOppositeSide(CurrMoveSide);
     }
 
     private void PerformMove(MoveInfo move)
@@ -191,13 +198,6 @@ public class Game : IDisposable
         return _board;
     }
 
-    public void SetGameState(Board newBoard, Side currentTurnSide)
-    {
-        _board = newBoard;
-        CurrTurnSide = currentTurnSide;
-        UpdateCurrentGameState();
-    }
-
     public static Side GetOppositeSide(Side side)
     {
         return side switch
@@ -221,6 +221,25 @@ public class Game : IDisposable
     public float RateCurrentPos()
     {
         return _ai.RatePosition(_board);
+    }
+
+    public void TakeBackLastMove()
+    {
+        var lastBoard = _playedBoards[^1];
+        _playedBoards.RemoveAt(_playedBoards.Count - 1);
+        _madeMoves.RemoveAt(_playedBoards.Count - 1);
+        _board = lastBoard;
+        _moveIndex--;
+        CurrMoveSide = GetOppositeSide(CurrMoveSide);
+    }
+
+    public void Restart()
+    {
+        SetupBoard();
+        SetupSide();
+        _moveIndex = 0;
+        _madeMoves.Clear();
+        _playedBoards.Clear();
     }
 
     public void Dispose()

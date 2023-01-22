@@ -8,7 +8,7 @@ public static class Program
     public static async Task Main()
     {
         var consolePlayer = new ConsolePlayer();
-        var game = new Game(consolePlayer, null, new ConsoleLogger());
+        var game = new Game(null, null, new ConsoleLogger());
         game.Init();
 
         const int repeatsAmount = 1;
@@ -19,13 +19,15 @@ public static class Program
             await SimulateGame(game);
             gameDurations[i] = sw.ElapsedMilliseconds;
 
-            game.SetGameState(Board.Initial(), Side.White);
+            game.Restart();
         }
 
         var averageGameDuration = gameDurations.Average();
         var gameDurationsString = string.Join(", ", gameDurations);
 
 
+        Console.WriteLine($"Pruning stat. Pruned: {CheckersAi.PrunedMovesCount}. Not Pruned: {CheckersAi.NotPrunedMovesCount}");
+        Console.WriteLine($"Boards cache stat. Right boards: {CheckersAi.TruePositiveBoardCache}. Wrong boards: {CheckersAi.FalsePositiveBoardCache}");
         Console.WriteLine($"Moves Pool stat: size {PoolsHolder.MovesCollectionPool.CurrentSize}\n" +
                           $"free {PoolsHolder.MovesCollectionPool.FreeTakenCounter} " +
                           $"spawned {PoolsHolder.MovesCollectionPool.SpawnedTakenCounter}\n" +
@@ -51,9 +53,9 @@ public static class Program
         var turnsCounter = 0;
         while (game.IsGameBeingPlayed && turnsCounter < 300)
         {
-            var currTurnSide = game.CurrTurnSide;
+            var currMoveSide = game.CurrMoveSide;
             var (chosenMove, gameState) = await game.MakeMove();
-            Console.WriteLine($"{currTurnSide} chose {chosenMove}");
+            Console.WriteLine($"{currMoveSide} chose {chosenMove}");
             Console.WriteLine($"After this move game state: {gameState}");
             Console.WriteLine(game.GetView());
             turnsCounter++;
@@ -62,7 +64,7 @@ public static class Program
 
     private static void ShowPossibleMoves(Game game)
     {
-        var possibleMoves = game.GetPossibleSideMoves(game.CurrTurnSide);
+        var possibleMoves = game.GetPossibleSideMoves(game.CurrMoveSide);
         Console.WriteLine(
             "Possible moves:\n" +
             string.Join(",\n", possibleMoves)

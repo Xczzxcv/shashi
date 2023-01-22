@@ -357,29 +357,4 @@ public class RulesManager
         };
         return pieceRank;
     }
-
-    public GameState GetGameState(Board board, Side currTurnSide)
-    {
-        var whitePossibleMoves = GetPossibleSideMoves(Side.White, board);
-        var whitePossibleMovesCount = whitePossibleMoves.Count;
-        whitePossibleMoves.ReturnToPool();
-
-        if (whitePossibleMovesCount == 0
-            && currTurnSide == Side.White)
-        {
-            return GameState.BlackWon;
-        }
-
-        var blackPossibleMoves = GetPossibleSideMoves(Side.Black, board);
-        var blackPossibleMovesCount = blackPossibleMoves.Count;
-        blackPossibleMoves.ReturnToPool();
-
-        if (blackPossibleMovesCount == 0
-            && currTurnSide == Side.Black)
-        {
-            return GameState.WhiteWon;
-        }
-
-        return GameState.GameBeingPlayed;
-    }
 }

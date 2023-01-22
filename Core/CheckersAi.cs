@@ -37,8 +37,8 @@ public class CheckersAi : IDisposable
     private static readonly Dictionary<int, Board> BoardStatesCached = new();
 
     private Config _config;
-    private int _truePositiveBoardCache;
-    private int _falsePositiveBoardCache;
+    public static int TruePositiveBoardCache;
+    public static int FalsePositiveBoardCache;
 
     public void Init(Config config)
     {
@@ -123,7 +123,7 @@ public class CheckersAi : IDisposable
         }
 
         if (piece is {Side: Side.White, Position.Y: 1 or 2}
-            || piece is {Side: Side.Black, Position.Y: 1 or 2})
+            || piece is {Side: Side.Black, Position.Y: 5 or 6})
         {
             piecePositionRating += _config.NearPromotionBuff;
         }
@@ -216,17 +216,21 @@ public class CheckersAi : IDisposable
         var updateBestMoveScoreFunc = SetupUpdateBestMoveScoreFunc(side);
         var bestMoveRating = SetupBestMoveRating(side);
 
-        foreach (var possibleMove in possibleMoves)
+        for (var moveInd = 0; moveInd < possibleMoves.Count; moveInd++)
         {
+            var possibleMove = possibleMoves[moveInd];
             EvaluateMove(game, side, ref alpha, ref beta, ref bestMoveRating, depth, possibleMove,
                 oldBoard, updateBestMoveScoreFunc);
 
             if (TryPrune(alpha, beta))
             {
+                PrunedMovesCount += possibleMoves.Count - (moveInd + 1);
                 break;
             }
+
+            NotPrunedMovesCount++;
         }
-        
+
         possibleMoves.ReturnToPool();
 
         return bestMoveRating;
@@ -272,7 +276,7 @@ public class CheckersAi : IDisposable
         game.MakeMove(possibleMove);
         var moveRating = MinMax(game, Game.GetOppositeSide(side), alpha, beta, depth + 1);
         CacheResult(game, depth, moveRating);
-        game.SetGameState(oldBoard, side);
+        game.TakeBackLastMove();
 
         return updateBestMoveScoreFunc(moveRating, ref bestMoveRating, ref alpha, ref beta);
     }
@@ -280,6 +284,8 @@ public class CheckersAi : IDisposable
     private delegate bool UpdateBestMoveScoreFunc(float currentMoveRating, ref float bestMoveRating, ref float alpha, ref float beta);
     private readonly UpdateBestMoveScoreFunc _updateBestWhitesScoreFunc = UpdateBestWhitesScore;
     private readonly UpdateBestMoveScoreFunc _updateBestBlacksScoreFunc = UpdateBestBlacksScore;
+    public static int NotPrunedMovesCount;
+    public static int PrunedMovesCount;
 
     private static bool UpdateBestWhitesScore(float currentMoveRating, ref float bestMoveRating, ref float alpha, ref float beta)
     {
@@ -331,11 +337,11 @@ public class CheckersAi : IDisposable
 
         if (!game.GetBoard().Equals(BoardStatesCached[boardHash]))
         {
-            _falsePositiveBoardCache++;
+            FalsePositiveBoardCache++;
             return false;
         }
 
-        _truePositiveBoardCache++;
+        TruePositiveBoardCache++;
         rating = ratedBoardState.Rating;
         return true;
     }

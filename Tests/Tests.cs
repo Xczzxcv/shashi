@@ -11,7 +11,7 @@ public class Tests
     public void TurkishTakeTest()
     {
         // Arrange.
-        const Side currentTurnSide = Side.White;
+        const Side currentMoveSide = Side.White;
         const string boardState = @"
 8|█░█░█░█░
 7|░█░█░█*█
@@ -24,10 +24,10 @@ public class Tests
   ABCDEFGH";
         const string takeStr = "Take: h6Xg7>f8, f8Xc5>a3, a3Xb2>c1, c1Xd2>e3";
 
-        var game = Setup.Game(boardState, currentTurnSide);
+        var game = Setup.Game(boardState, currentMoveSide);
 
         // Act.
-        var possibleMoves = game.GetPossibleSideMoves(game.CurrTurnSide);
+        var possibleMoves = game.GetPossibleSideMoves(game.CurrMoveSide);
 
         // Assert.
         Assert.AreEqual(1, possibleMoves.Count);
@@ -38,7 +38,7 @@ public class Tests
     public void ManyPossibleTakeVariantsTest()
     {
         // Arrange.
-        const Side currentTurnSide = Side.White;
+        const Side currentMoveSide = Side.White;
         const string boardState = @"
 8|█░█░█░█░
 7|░█*█░█░█
@@ -55,10 +55,10 @@ public class Tests
         const string take3Str = "Take: h2Xg3>f4, f4Xe3>d2, d2Xc3>b4, b4Xc5>d6, d6Xc7>b8";
         const string take4Str = "Take: h2Xg3>f4, f4Xe3>d2, d2Xc3>b4, b4Xc5>d6, d6Xe5>f4, f4Xg5>h6";
 
-        var game = Setup.Game(boardState, currentTurnSide);
+        var game = Setup.Game(boardState, currentMoveSide);
 
         // Act.
-        var possibleMoves = game.GetPossibleSideMoves(game.CurrTurnSide);
+        var possibleMoves = game.GetPossibleSideMoves(game.CurrMoveSide);
 
         // Assert.
         Assert.AreEqual(5, possibleMoves.Count);

@@ -4,10 +4,13 @@ namespace Tests;
 
 public static class Setup
 {
-    public static Game Game(string boardState, Side currentTurnSide, int? aiDepth = null)
+    public static Game Game(string boardState, Side currentMoveSide, int? aiDepth = null)
     {
         var loadedConfig = SerializationManager.LoadGameConfig();
+
         loadedConfig.BoardConfig.BoardImgStateStrings = boardState.Split('\n');
+        loadedConfig.BoardConfig.CurrentMoveSide = currentMoveSide;
+        
         if (aiDepth.HasValue)
         {
             loadedConfig.AiConfig.MaxDepth = aiDepth.Value;
@@ -16,8 +19,6 @@ public static class Setup
         var game = Create.Game();
         game.Init(loadedConfig);
 
-        var loadedBoard = Board(boardState);
-        game.SetGameState(loadedBoard, currentTurnSide);
         return game;
     }
 
