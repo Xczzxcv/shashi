@@ -8,11 +8,11 @@ public static class Program
     public static async Task Main()
     {
         var consolePlayer = new ConsolePlayer();
-        var game = new Game(null, null, new ConsoleLogger());
+        var game = new Game(consolePlayer, null, new ConsoleLogger());
         game.Init();
 
         const int repeatsAmount = 1;
-        var gameDurations = new double[5];
+        var gameDurations = new double[repeatsAmount];
         for (int i = 0; i < repeatsAmount; i++)
         {
             var sw = Stopwatch.StartNew();
@@ -50,15 +50,13 @@ public static class Program
     {
         Console.WriteLine(game.GetView());
 
-        var turnsCounter = 0;
-        while (game.IsGameBeingPlayed && turnsCounter < 300)
+        while (game.IsGameBeingPlayed)
         {
             var currMoveSide = game.CurrMoveSide;
             var (chosenMove, gameState) = await game.MakeMove();
             Console.WriteLine($"{currMoveSide} chose {chosenMove}");
             Console.WriteLine($"After this move game state: {gameState}");
             Console.WriteLine(game.GetView());
-            turnsCounter++;
         }
     }
 

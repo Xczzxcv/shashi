@@ -6,4 +6,5 @@ public enum GameState
     GameBeingPlayed,
     WhiteWon,
     BlackWon,
+    Draw
 }

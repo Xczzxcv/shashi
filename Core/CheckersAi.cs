@@ -53,8 +53,10 @@ public class CheckersAi : IDisposable
         SerializationManager.LoadCachedRatingBoardsData(RatedBoardStatesCached);
 
         const int empiricPower = 8;
-        var neededCapacity = Math.Pow(_config.MaxDepth, empiricPower);
-        BoardStatesCached.EnsureCapacity(BoardStatesCached.Count + (int) neededCapacity);
+        const int maxCapacity = 100_000_000;
+        var empiricNeededCapacity = (int) Math.Pow(_config.MaxDepth, empiricPower);
+        var neededCapacity = Math.Min(maxCapacity, empiricNeededCapacity);
+        BoardStatesCached.EnsureCapacity(BoardStatesCached.Count +  neededCapacity);
         RatedBoardStatesCached.EnsureCapacity(RatedBoardStatesCached.Count + (int) neededCapacity);
     }
 
@@ -96,7 +98,7 @@ public class CheckersAi : IDisposable
         {
             PieceRank.Checker => _config.CheckerCost,
             PieceRank.King => _config.KingCost,
-            _ => throw new ArgumentException($"Unknown piece {piece} rank")
+            _ => throw ThrowHelper.WrongPieceRankException(piece)
         };
     }
 
@@ -107,7 +109,7 @@ public class CheckersAi : IDisposable
         {
             PieceRank.Checker => _config.CheckersBoardSquareCoefficients[blackBoardSquareIndex],
             PieceRank.King => _config.KingsBoardSquareCoefficients[blackBoardSquareIndex],
-            _ => throw new ArgumentException($"Unknown piece {piece} rank"),
+            _ => throw ThrowHelper.WrongPieceRankException(piece),
         };
 
         ApplyNearPromotionBuff(piece, ref piecePositionRating);
@@ -162,7 +164,7 @@ public class CheckersAi : IDisposable
             var oldBestMoveRating = bestMoveRating;
             var possibleMove = possibleMoves[moveInd];
             var isCurrentlyBestMove = EvaluateMove(game, side, ref alpha, ref beta, ref bestMoveRating, depth,
-                possibleMove, oldBoard, updateBestMoveScoreFunc);
+                possibleMove, updateBestMoveScoreFunc);
             if (isCurrentlyBestMove)
             {
                 chosenMove = possibleMove;
@@ -189,20 +191,19 @@ public class CheckersAi : IDisposable
             return rating;
         }
         
-        var possibleMoves = game.GetPossibleSideMoves(side);
         var oldBoard = game.GetBoard();
-
-        if (possibleMoves.Count <= 0)
+        if (!game.IsGameBeingPlayed)
         {
-            possibleMoves.ReturnToPool();
-            return side switch
+            return game.State switch
             {
-                Side.White => -_config.LossRatingAmount,
-                Side.Black => _config.LossRatingAmount,
-                _ => throw new NotImplementedException($"Unknown turn side value {side}")
+                GameState.WhiteWon => _config.LossRatingAmount,
+                GameState.BlackWon => -_config.LossRatingAmount,
+                GameState.Draw => 0,
+                _ => throw ThrowHelper.ThrowWrongSide(side),
             };
         }
 
+        var possibleMoves = game.GetPossibleSideMoves(side);
         if (depth >= _config.MaxDepth)
         {
             var noTakes = possibleMoves.First().MoveType == MoveInfo.Type.Move;
@@ -219,8 +220,7 @@ public class CheckersAi : IDisposable
         for (var moveInd = 0; moveInd < possibleMoves.Count; moveInd++)
         {
             var possibleMove = possibleMoves[moveInd];
-            EvaluateMove(game, side, ref alpha, ref beta, ref bestMoveRating, depth, possibleMove,
-                oldBoard, updateBestMoveScoreFunc);
+            EvaluateMove(game, side, ref alpha, ref beta, ref bestMoveRating, depth, possibleMove, updateBestMoveScoreFunc);
 
             if (TryPrune(alpha, beta))
             {
@@ -254,7 +254,7 @@ public class CheckersAi : IDisposable
         {
             Side.White => float.NegativeInfinity,
             Side.Black => float.PositiveInfinity,
-            _ => throw new ArgumentException($"Unknown side value {side}")
+            _ => throw ThrowHelper.ThrowWrongSide(side)
         };
         return bestMoveRating;
     }
@@ -265,13 +265,13 @@ public class CheckersAi : IDisposable
         {
             Side.White => _updateBestWhitesScoreFunc,
             Side.Black => _updateBestBlacksScoreFunc,
-            _ => throw new ArgumentException($"Unknown side value {side}")
+            _ => throw ThrowHelper.ThrowWrongSide(side)
         };
         return updateBestMoveScoreFunc;
     }
 
     private bool EvaluateMove(Game game, Side side, ref float alpha, ref float beta, ref float bestMoveRating,
-        int depth, MoveInfo possibleMove, Board oldBoard, UpdateBestMoveScoreFunc updateBestMoveScoreFunc)
+        int depth, MoveInfo possibleMove, UpdateBestMoveScoreFunc updateBestMoveScoreFunc)
     {
         game.MakeMove(possibleMove);
         var moveRating = MinMax(game, Game.GetOppositeSide(side), alpha, beta, depth + 1);
@@ -389,7 +389,7 @@ public class CheckersAi : IDisposable
             case Side.Black:
                 return GetMinIndex(possibleMoveRatings);
             default:
-                throw new ArgumentException($"Unknown side value {side}");
+                throw ThrowHelper.ThrowWrongSide(side);
         }
     }
 

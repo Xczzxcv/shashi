@@ -55,7 +55,7 @@ public partial struct Board : IEquatable<Board>
             case Side.Black:
                 return _black;
             default:
-                throw new ArgumentException($"Unknown side value {side}");
+                throw ThrowHelper.ThrowWrongSide(side);
         }
     }
 
@@ -78,7 +78,7 @@ public partial struct Board : IEquatable<Board>
                 _black.SetPiece(piece);
                 break;
             default:
-                throw new ArgumentException($"Unknown side value {piece.Side}");
+                throw ThrowHelper.ThrowWrongSide(piece.Side);
         }
     }    
     
@@ -96,7 +96,7 @@ public partial struct Board : IEquatable<Board>
                 _black.DelPiece(piece);
                 break;
             default:
-                throw new ArgumentException($"Unknown side value {piece.Side}");
+                throw ThrowHelper.ThrowWrongSide(piece.Side);
         }
     }
 
@@ -115,6 +115,11 @@ public partial struct Board : IEquatable<Board>
         }
 
         return !TryGetPiece(pos, out _);
+    }
+
+    public override string ToString()
+    {
+        return $"W: {_white} B: {_black}";
     }
 
     public bool Equals(Board other)
@@ -162,5 +167,10 @@ public partial struct Board : IEquatable<Board>
     {
         return 0 <= boardSquare.X && boardSquare.X < Constants.BOARD_SIZE
             && 0 <= boardSquare.Y && boardSquare.Y < Constants.BOARD_SIZE;
+    }
+
+    public static bool IsBigLine(Vec2Int pos)
+    {
+        return pos.Y == Constants.BOARD_SIZE - 1 - pos.X;
     }
 }

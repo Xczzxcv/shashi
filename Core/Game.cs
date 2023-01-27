@@ -1,4 +1,5 @@
-﻿using System.Text.Json.Serialization;
+﻿using System.Diagnostics;
+using System.Text.Json.Serialization;
 
 namespace Core;
 
@@ -15,6 +16,8 @@ public class Game : IDisposable
 
     public Side CurrMoveSide { get; private set; }
     public bool IsGameBeingPlayed => _gameStateManager.State == GameState.GameBeingPlayed;
+    public GameState State => _gameStateManager.State;
+    public int CurrentTurnIndex => _moveIndex / 2;
 
     private readonly RulesManager _rulesManager;
     private readonly LogManager _logManager;
@@ -28,7 +31,6 @@ public class Game : IDisposable
     private Board _board;
     private Config _config;
     private int _moveIndex;
-    public int CurrentTurnIndex => _moveIndex / 2;
 
     public Game(Player? whitesPlayer, Player? blacksPlayer, ILogger? logger = null)
     {
@@ -102,7 +104,6 @@ public class Game : IDisposable
         var currentPlayer = GetCurrentPlayer();
         var chosenMove = await currentPlayer.ChooseMove(this, CurrMoveSide);
         MakeMove(chosenMove);
-        _gameStateManager.UpdateState();
         return (chosenMove, _gameStateManager.State);
     }
 
@@ -112,12 +113,17 @@ public class Game : IDisposable
         {
             Side.White => _whitesPlayer,
             Side.Black => _blacksPlayer,
-            _ => throw new ArgumentException($"Unknown side value {CurrMoveSide}")
+            _ => throw ThrowHelper.ThrowWrongSide(CurrMoveSide),
         };
     }
 
     public void MakeMove(MoveInfo move)
     {
+        if (!IsGameBeingPlayed)
+        {
+            throw new Exception("KEK");
+        }
+
         _playedBoards.Add(_board);
         _madeMoves.Add(move);
         switch (move.MoveType)
@@ -129,11 +135,12 @@ public class Game : IDisposable
                 PerformTake(move);
                 break;
             default:
-                throw new ArgumentException($"Unknown move type ({move})");
+                throw ThrowHelper.WrongMoveTypeException(move);
         }
 
         FlipTurn();
         _moveIndex++;
+        _gameStateManager.ProcessMadeMove();
     }
 
     private void FlipTurn()
@@ -204,7 +211,7 @@ public class Game : IDisposable
         {
             Side.White => Side.Black,
             Side.Black => Side.White,
-            _ => throw new NotImplementedException($"Unknown turn side value {side}")
+            _ => throw ThrowHelper.ThrowWrongSide(side),
         };
     }
 
@@ -226,8 +233,9 @@ public class Game : IDisposable
     public void TakeBackLastMove()
     {
         var lastBoard = _playedBoards[^1];
-        _playedBoards.RemoveAt(_playedBoards.Count - 1);
-        _madeMoves.RemoveAt(_playedBoards.Count - 1);
+        _playedBoards.RemoveAt(_playedBoards.LastIndex());
+        _madeMoves.RemoveAt(_madeMoves.LastIndex());
+        _gameStateManager.ProcessMoveTakeBack(_board);
         _board = lastBoard;
         _moveIndex--;
         CurrMoveSide = GetOppositeSide(CurrMoveSide);
@@ -240,6 +248,11 @@ public class Game : IDisposable
         _moveIndex = 0;
         _madeMoves.Clear();
         _playedBoards.Clear();
+    }
+
+    public (List<MoveInfo> moves, List<Board> boards) GetHistory()
+    {
+        return (_madeMoves, _playedBoards);
     }
 
     public void Dispose()

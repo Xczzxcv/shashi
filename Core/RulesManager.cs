@@ -82,7 +82,7 @@ public class RulesManager
         {
             PieceRank.Checker => GetPossibleTakeDestPositionsForChecker(enemyPiece, attackDirection, board),
             PieceRank.King => GetPossibleTakeDestPositionsForKing(piece, enemyPiece, attackDirection, board),
-            _ => throw new ArgumentException($"Unknown piece {piece} rank")
+            _ => throw ThrowHelper.WrongPieceRankException(in piece),
         };
 
         return takeDestPositions;
@@ -178,7 +178,7 @@ public class RulesManager
         {
             PieceRank.Checker => 1,
             PieceRank.King => Constants.BOARD_SIZE - 1,
-            _ => throw new ArgumentException($"Unknown piece {piece} rank")
+            _ => throw ThrowHelper.WrongPieceRankException(piece)
         };
 
         attackDirections ??= _defaultAttackDirections;
@@ -280,7 +280,7 @@ public class RulesManager
         {
             PieceRank.Checker=>1,
             PieceRank.King=>Constants.BOARD_SIZE - 1,
-            _ => throw new ArgumentException($"Unknown piece {piece} rank")
+            _ => throw ThrowHelper.WrongPieceRankException(piece)
         };
         foreach (var moveDirection in _moveDirections)
         {

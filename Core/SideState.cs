@@ -196,7 +196,7 @@ public struct SideState : IEquatable<SideState>
         {
             PieceRank.Checker => CheckersPartShift,
             PieceRank.King => KingsPartShift,
-            _ => throw new ArgumentException($"Unknown piece {piece} rank")
+            _ => throw ThrowHelper.WrongPieceRankException(piece)
         };
 
         SetBitAtIndex(initialBitShift + blackSquareBitIndex, pieceStatus);

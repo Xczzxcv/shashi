@@ -2,17 +2,6 @@
 
 namespace Core;
 
-public static class HashsetExt
-{
-    public static T GetAny<T>(this HashSet<T> hashSet)
-    {
-        var enumerator = hashSet.GetEnumerator();
-        enumerator.MoveNext();
-        enumerator.Dispose();
-        return enumerator.Current;
-    }
-}
-
 public class Pool<T> : IPool
     where T : IPoolable, new()
 {

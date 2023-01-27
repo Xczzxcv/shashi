@@ -58,11 +58,14 @@ public struct MoveInfo
         return $"{MoveType}: {infoString}";
     }
 
-    public void Reset()
+    public Vec2Int GetStartPiecePos()
     {
-        MoveType = Type.None;
-        Move = default;
-        Takes.Clear();
+        return MoveType switch
+        {
+            Type.Move => Move.SrcPos,
+            Type.Take => Takes[0].SrcPos,
+            _ => throw ThrowHelper.WrongMoveTypeException(this),
+        };
     }
 }
 
