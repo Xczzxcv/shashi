@@ -1,4 +1,3 @@
-using System;
 using System.Collections.Generic;
 using Core;
 using NUnit.Framework;
@@ -97,8 +96,8 @@ public class Tests
         }
 
         var failRate = failedPairsCount / (double) testedPairsCount;
-        Console.WriteLine($"[{nameof(HashFunctionTest)}] {testedPairsCount} combination tested with {failedPairsCount} errors.");
-        Console.WriteLine($"[{nameof(HashFunctionTest)}] Fail rate: {failRate} ({acceptedFailRate} is accepted)");
+        DefaultLogger.Log($"{testedPairsCount} combination tested with {failedPairsCount} errors.");
+        DefaultLogger.Log($"Fail rate: {failRate} ({acceptedFailRate} is accepted)");
         
         // Assert.
         Assert.True(failRate <= acceptedFailRate);

@@ -55,7 +55,7 @@ public partial struct Board : IEquatable<Board>
             case Side.Black:
                 return _black;
             default:
-                throw ThrowHelper.ThrowWrongSide(side);
+                throw ThrowHelper.WrongSideException(side);
         }
     }
 
@@ -78,7 +78,7 @@ public partial struct Board : IEquatable<Board>
                 _black.SetPiece(piece);
                 break;
             default:
-                throw ThrowHelper.ThrowWrongSide(piece.Side);
+                throw ThrowHelper.WrongSideException(piece.Side);
         }
     }    
     
@@ -96,7 +96,7 @@ public partial struct Board : IEquatable<Board>
                 _black.DelPiece(piece);
                 break;
             default:
-                throw ThrowHelper.ThrowWrongSide(piece.Side);
+                throw ThrowHelper.WrongSideException(piece.Side);
         }
     }
 

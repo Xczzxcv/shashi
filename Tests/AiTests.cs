@@ -28,7 +28,7 @@ public class AiTests
         
         // Act.
         var ratingBefore = game.RateCurrentPos();
-        Console.WriteLine($"Board before:\n{game.GetView()}");
+        DefaultLogger.Log($"Board before:\n{game.GetView()}");
 
         await game.MakeMove();
         await game.MakeMove();
@@ -37,7 +37,7 @@ public class AiTests
         await game.MakeMove();
 
         var ratingAfter = game.RateCurrentPos();
-        Console.WriteLine($"Board before:\n{game.GetView()}");
+        DefaultLogger.Log($"Board before:\n{game.GetView()}");
 
         var ratingDiff = ratingAfter - ratingBefore;
 

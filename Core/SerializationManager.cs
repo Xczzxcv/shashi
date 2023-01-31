@@ -1,7 +1,5 @@
 ﻿using System.Runtime.Serialization;
-using System.Text.Encodings.Web;
 using System.Text.Json;
-using System.Text.Unicode;
 
 namespace Core;
 
@@ -10,57 +8,26 @@ public static class SerializationManager
     private const string FilesPath = "../../../../../ConfigFiles/";
     private const string FilesExtension = ".json";
 
-    private const string BoardsFilename = "Boards";
-    private const string BoardsPath = $"{FilesPath}{BoardsFilename}{FilesExtension}";
-
     private const string RatedBoardsFilename = "RatedBoards";
     private const string RatedBoardsPath = $"{FilesPath}{RatedBoardsFilename}{FilesExtension}";
 
     private const string GameConfigFilename = "GameConfig";
     private const string GameConfigPath = $"{FilesPath}{GameConfigFilename}{FilesExtension}";
 
-    private static readonly JsonSerializerOptions JsonSerializerOptions = new()
+    private const string WhiteMoveRatingsFilename = "MoveRatings_White";
+    private const string BlackMoveRatingsFilename = "MoveRatings_Black";
+    private const string WhiteMoveRatingsPath = $"{FilesPath}{WhiteMoveRatingsFilename}{FilesExtension}";
+    private const string BlackMoveRatingsPath = $"{FilesPath}{BlackMoveRatingsFilename}{FilesExtension}";
+
+    public static void LoadCachedRatingBoardsData(Dictionary<Board, CheckersAi.RatedBoardState> ratedBoards)
     {
-        AllowTrailingCommas = true,
-        Converters = {new BoardJsonConverter()},
-        Encoder = JavaScriptEncoder.Create(UnicodeRanges.BasicLatin),
-    };
-
-    private static readonly Dictionary<string, byte[]> CachedFilesContent = new();
-
-    private static byte[] _buffer = new byte[1024];
-
-    public static void LoadCachedBoardsData(Dictionary<int, Board> boards)
-    {
-        if (!TryReadFile(BoardsPath, FileMode.OpenOrCreate, out var readBytes))
+        if (!SerializationHelper.TryReadFile(RatedBoardsPath, FileMode.OpenOrCreate, out var readBytes))
         {
             return;
         }
 
         var deserializedBoardsData = JsonSerializer
-            .Deserialize<Dictionary<int, Board>>(readBytes, JsonSerializerOptions);
-        if (deserializedBoardsData == null)
-        {
-            return;
-        }
-
-        foreach (var (key, value) in deserializedBoardsData)
-        {
-            boards.Add(key, value);
-        }
-
-        Console.WriteLine($"Cached boards data loaded ({boards.Count} entities)");
-    }
-
-    public static void LoadCachedRatingBoardsData(Dictionary<int, CheckersAi.RatedBoardState> ratedBoards)
-    {
-        if (!TryReadFile(RatedBoardsPath, FileMode.OpenOrCreate, out var readBytes))
-        {
-            return;
-        }
-
-        var deserializedBoardsData = JsonSerializer
-            .Deserialize<Dictionary<int, CheckersAi.RatedBoardState>>(readBytes, JsonSerializerOptions);
+            .Deserialize<Dictionary<Board, CheckersAi.RatedBoardState>>(readBytes, SerializationHelper.JsonSerializerOptions);
         if (deserializedBoardsData == null)
         {
             return;
@@ -71,35 +38,22 @@ public static class SerializationManager
             ratedBoards.Add(key, value);
         }
 
-        Console.WriteLine($"Cached rating boards data loaded ({ratedBoards.Count} entities)");
+        DefaultLogger.Log($"Cached rating boards data loaded ({deserializedBoardsData.Count} entities)");
     }
 
-    public static void SaveCachedBoardsData(Dictionary<int, Board> boardStatesCached)
+    public static void SaveCachedRatedBoardsData(Dictionary<Board, CheckersAi.RatedBoardState> ratedBoards)
     {
-        var currentPath = Directory.GetCurrentDirectory();
-        var destFile = new FileStream(currentPath + BoardsPath, FileMode.OpenOrCreate);
-        JsonSerializer.Serialize(destFile, boardStatesCached, JsonSerializerOptions);
-
-        destFile.Close();
-    }
-
-    public static void SaveCachedRatedBoardsData(Dictionary<int, CheckersAi.RatedBoardState> ratedBoards)
-    {
-        var currentPath = Directory.GetCurrentDirectory();
-        var destFile = new FileStream(currentPath + RatedBoardsPath, FileMode.OpenOrCreate);
-        JsonSerializer.Serialize(destFile, ratedBoards, JsonSerializerOptions);
-
-        destFile.Close();
+        SerializationHelper.SaveDataToFile(RatedBoardsPath, ratedBoards);
     }
 
     public static Game.Config LoadGameConfig()
     {
-        if (!TryReadFile(GameConfigPath, FileMode.Open, out var readBytes))
+        if (!SerializationHelper.TryReadFile(GameConfigPath, FileMode.Open, out var readBytes))
         {
             throw new SerializationException($"Can't get {nameof(Game.Config)} from {GameConfigFilename}");
         }
 
-        var gameConfig = JsonSerializer.Deserialize<Game.Config>(readBytes, JsonSerializerOptions);
+        var gameConfig = JsonSerializer.Deserialize<Game.Config>(readBytes, SerializationHelper.JsonSerializerOptions);
         if (gameConfig.Equals(default))
         {
             throw new SerializationException($"Can't get {nameof(Game.Config)} from {GameConfigFilename}");
@@ -108,41 +62,42 @@ public static class SerializationManager
         return gameConfig;
     }
 
-    private static bool TryReadFile(string filePath, FileMode fileMode, out byte[] readBytes)
+    public static void LoadMoveRatings(SideMoveRatings whiteMoves, SideMoveRatings blackMoves)
     {
-        if (CachedFilesContent.TryGetValue(filePath, out var cachedReadBytes))
-        {
-            readBytes = cachedReadBytes;
-            return true;
-        }
-        
-        var currentPath = Directory.GetCurrentDirectory();
-        var srcFile = new FileStream(currentPath + filePath, fileMode, FileAccess.Read);
-        var isEmptyFile = srcFile.Length == 0;
-        if (isEmptyFile)
-        {
-            readBytes = Array.Empty<byte>();
-            return false;
-        }
-
-        var bytesBuffer = GetBuffer(srcFile.Length);
-        var readAmount = srcFile.Read(bytesBuffer);
-        srcFile.Close();
-
-        readBytes = bytesBuffer[..readAmount];
-
-        CachedFilesContent[filePath] = readBytes;
-        return readBytes.Length > 0;
+        LoadSideMoveRating(WhiteMoveRatingsPath, whiteMoves);
+        LoadSideMoveRating(BlackMoveRatingsPath, blackMoves);
     }
 
-    private static byte[] GetBuffer(long length)
+    private static void LoadSideMoveRating(string sideMoveRatingsPath, SideMoveRatings sideMoves)
     {
-        if (_buffer.Length >= length)
+        if (!SerializationHelper.TryReadFile(sideMoveRatingsPath, FileMode.OpenOrCreate, out var readBytes))
         {
-            return _buffer;
+            return;
         }
 
-        _buffer = new byte[length];
-        return _buffer;
+        var deserializedMovesData = JsonSerializer
+            .Deserialize<SideMoveRatings>(readBytes, SerializationHelper.JsonSerializerOptions);
+        if (deserializedMovesData == null)
+        {
+            return;
+        }
+
+        foreach (var (key, value) in deserializedMovesData)
+        {
+            sideMoves.Add(key, value);
+        }
+
+        DefaultLogger.Log($"Cached move ratings data loaded ({deserializedMovesData.Count} entities from {sideMoveRatingsPath})");
+    }
+
+    public static void SaveMoveRatings(SideMoveRatings whiteMoves, SideMoveRatings blackMoves)
+    {
+        SaveSideMoveRatings(WhiteMoveRatingsPath, whiteMoves);
+        SaveSideMoveRatings(BlackMoveRatingsPath, blackMoves);
+    }
+
+    private static void SaveSideMoveRatings(string sideMoveRatingsPath, SideMoveRatings sideMoves)
+    {
+        SerializationHelper.SaveDataToFile(sideMoveRatingsPath, sideMoves);
     }
 }

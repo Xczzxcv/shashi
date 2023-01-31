@@ -1,4 +1,5 @@
 ﻿using System.Diagnostics;
+using System.Runtime.InteropServices;
 
 namespace Core;
 
@@ -17,11 +18,12 @@ public class GameStateManager
     private const int ThreePiecesVsOneKingOnBigLine = 5 + WinningPositionMoveCount;
     private const int ThreeKingsVsOneKingNotOnBigLine = 15;
     private const int InvalidTurnIndex = -1;
+    private const int ActivateTurnVarDefaultValue = int.MaxValue;
 
     private record struct MaxAndActivationTurn(int Max, int ActivationTurn);
     // no take or promotion
     private static readonly Dictionary<int, MaxAndActivationTurn> 
-        _bothHaveKingsAndPowerEqualityNotChanged = new()
+        BothHaveKingsAndPowerEqualityNotChanged = new()
     {
         {2, new(5, InvalidTurnIndex)},
         {3, new(5, InvalidTurnIndex)},
@@ -31,14 +33,16 @@ public class GameStateManager
         {7, new(60, InvalidTurnIndex)},
     };
 
-    private int _threeKingsVsOneKingActivateTurn = int.MaxValue;
-    private int _threePiecesVsOneKingOnBigLineActivateTurn = int.MaxValue;
+    private int _threeKingsVsOneKingActivateTurn;
+    private int _threePiecesVsOneKingOnBigLineActivateTurn;
 
     public GameStateManager(Game game, RulesManager rulesManager)
     {
         _rulesManager = rulesManager;
         _game = game;
         State = GameState.GameBeingPlayed;
+        _threeKingsVsOneKingActivateTurn = ActivateTurnVarDefaultValue;
+        _threePiecesVsOneKingOnBigLineActivateTurn = ActivateTurnVarDefaultValue;
     }
 
     public void ProcessMadeMove()
@@ -63,6 +67,22 @@ public class GameStateManager
 
         State = _states[^1];
         _states.RemoveAt(_states.LastIndex());
+    }
+    
+    public void ProcessGameReset()
+    {
+        _playedPositionsCounter.Clear();
+        _states.Clear();
+        State = GameState.GameBeingPlayed;
+        foreach (var piecesAmount in BothHaveKingsAndPowerEqualityNotChanged.Keys)
+        {
+            ref var maxAndActivationTurn = ref CollectionsMarshal.GetValueRefOrNullRef(
+                BothHaveKingsAndPowerEqualityNotChanged, piecesAmount);
+            maxAndActivationTurn.ActivationTurn = 0;
+        }
+
+        _threeKingsVsOneKingActivateTurn = ActivateTurnVarDefaultValue;
+        _threePiecesVsOneKingOnBigLineActivateTurn = ActivateTurnVarDefaultValue;
     }
 
     private GameState GetGameState()
@@ -197,17 +217,17 @@ public class GameStateManager
         MaxAndActivationTurn currState;
         if (!CheckBothHaveKingsAndPowerEqualityNotChangedPieces(currBoard, out var piecesAmount))
         {
-            if (_bothHaveKingsAndPowerEqualityNotChanged.TryGetValue(piecesAmount,
+            if (BothHaveKingsAndPowerEqualityNotChanged.TryGetValue(piecesAmount,
                     out currState))
             {
                 currState.ActivationTurn = InvalidTurnIndex;
-                _bothHaveKingsAndPowerEqualityNotChanged[piecesAmount] = currState;
+                BothHaveKingsAndPowerEqualityNotChanged[piecesAmount] = currState;
             }
 
             return false;
         }
 
-        var rightPiecesAmount = _bothHaveKingsAndPowerEqualityNotChanged.TryGetValue(piecesAmount, 
+        var rightPiecesAmount = BothHaveKingsAndPowerEqualityNotChanged.TryGetValue(piecesAmount, 
             out currState);
         if (!rightPiecesAmount)
         {
@@ -217,7 +237,7 @@ public class GameStateManager
         if (currState.ActivationTurn == InvalidTurnIndex)
         {
             currState.ActivationTurn = _game.CurrentTurnIndex + currState.Max;
-            _bothHaveKingsAndPowerEqualityNotChanged[piecesAmount] = currState;
+            BothHaveKingsAndPowerEqualityNotChanged[piecesAmount] = currState;
             return false;
         }
 

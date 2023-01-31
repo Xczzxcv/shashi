@@ -5,30 +5,35 @@ namespace Core;
 
 public class BoardJsonConverter : JsonConverter<Board>
 {
-    [Serializable]
-    public struct BoardSerialization
-    {
-        [JsonInclude, JsonPropertyName("w")]
-        public ulong W;
-        [JsonInclude, JsonPropertyName("b")]
-        public ulong B;
-    }
-    
     public override Board Read(ref Utf8JsonReader reader, Type typeToConvert, 
         JsonSerializerOptions options)
     {
-        var boardStr = reader.GetString();
-        var boardSerialization = JsonSerializer.Deserialize<BoardSerialization>(boardStr);
-        var whitesState = boardSerialization.W;
-        var blacksState = boardSerialization.B;
-        var resultBoard = Board.State(whitesState, blacksState);
-        return resultBoard;
+        return GetBoardFromString(ref reader);
     }
 
     public override void Write(Utf8JsonWriter writer, Board value, JsonSerializerOptions options)
     {
-        var boardSerialization = value.GetSerialization();
-        var boardStr = JsonSerializer.Serialize(boardSerialization);
-        writer.WriteStringValue(boardStr);
+        var boardSerialization = value.ToFen();
+        writer.WriteStringValue(boardSerialization);
+    }
+
+    public override Board ReadAsPropertyName(ref Utf8JsonReader reader, Type typeToConvert,
+        JsonSerializerOptions options)
+    {
+        return GetBoardFromString(ref reader);
+    }
+
+    public override void WriteAsPropertyName(Utf8JsonWriter writer, Board value, 
+        JsonSerializerOptions options)
+    {
+        var boardSerialization = value.ToFen();
+        writer.WritePropertyName(boardSerialization);
+    }
+
+    private static Board GetBoardFromString(ref Utf8JsonReader reader)
+    {
+        var boardStr = reader.GetString();
+        var resultBoard = Board.FromFen(boardStr);
+        return resultBoard;
     }
 }

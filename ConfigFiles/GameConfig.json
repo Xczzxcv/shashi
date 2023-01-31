@@ -1,6 +1,6 @@
 {
 	"board": {
-		"use_custom": true,
+		"use_custom": false,
 		"current_move_side": "white",
 		"board_state": [
 			"8|█░█B█░█░",
@@ -41,6 +41,6 @@
 		"checker_cost": 1,
 		"king_cost": 2.5,
 		"near_promotion_buff": 0.2,
-		"max_depth": 12
+		"max_depth": 6
 	}
 }

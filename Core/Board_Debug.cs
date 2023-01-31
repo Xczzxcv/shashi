@@ -12,19 +12,19 @@ public partial struct Board
     {
         switch (squareInfo)
         {
-                case EmptyBlackSqr:
+                case EmptyBlackSqrView:
                     squareState = SquareState.Empty;
                     break;
-                case WhiteChecker:
+                case WhiteCheckerView:
                     squareState = SquareState.WhiteChecker;
                     break;
-                case BlackChecker:
+                case BlackCheckerView:
                     squareState = SquareState.BlackChecker;
                     break;
-                case WhiteKing:
+                case WhiteKingView:
                     squareState = SquareState.WhiteKing;
                     break;
-                case BlackKing:
+                case BlackKingView:
                     squareState = SquareState.BlackKing;
                     break;
                 default:
@@ -38,7 +38,7 @@ public partial struct Board
     public void SetState(string stateStr)
     {
         var index = 0;
-        for (var i = 0; i < stateStr.Length && index < 32; i++)
+        for (var i = 0; i < stateStr.Length && index < Constants.BLACK_BOARD_SQUARES_COUNT; i++)
         {
             var squareInfo = stateStr[i];
             if (!TryGetSquareContent(squareInfo, out var squareState))

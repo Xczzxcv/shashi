@@ -2,7 +2,7 @@
 
 namespace Core;
 
-public static class PoolsHolder
+public static class PoolsProvider
 {
     public static readonly Pool<PiecesCollection> PiecesCollectionPool = new();
     public static readonly Pool<MovesCollection> MovesCollectionPool = new();

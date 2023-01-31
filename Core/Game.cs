@@ -3,7 +3,7 @@ using System.Text.Json.Serialization;
 
 namespace Core;
 
-public class Game : IDisposable
+public partial class Game : IDisposable
 {
     [Serializable]
     public struct Config
@@ -40,7 +40,9 @@ public class Game : IDisposable
         _ai = new CheckersAi();
         
         _whitesPlayer = whitesPlayer ?? new BotPlayer(_ai);
+        _whitesPlayer.Init();
         _blacksPlayer = blacksPlayer ?? new BotPlayer(_ai);
+        _blacksPlayer.Init();
 
         _logManager = new LogManager();
         _logManager.Setup(logger);
@@ -113,16 +115,13 @@ public class Game : IDisposable
         {
             Side.White => _whitesPlayer,
             Side.Black => _blacksPlayer,
-            _ => throw ThrowHelper.ThrowWrongSide(CurrMoveSide),
+            _ => throw ThrowHelper.WrongSideException(CurrMoveSide),
         };
     }
 
     public void MakeMove(MoveInfo move)
     {
-        if (!IsGameBeingPlayed)
-        {
-            throw new Exception("KEK");
-        }
+        Debug.Assert(IsGameBeingPlayed);
 
         _playedBoards.Add(_board);
         _madeMoves.Add(move);
@@ -211,7 +210,7 @@ public class Game : IDisposable
         {
             Side.White => Side.Black,
             Side.Black => Side.White,
-            _ => throw ThrowHelper.ThrowWrongSide(side),
+            _ => throw ThrowHelper.WrongSideException(side),
         };
     }
 
@@ -248,15 +247,20 @@ public class Game : IDisposable
         _moveIndex = 0;
         _madeMoves.Clear();
         _playedBoards.Clear();
+        _gameStateManager.ProcessGameReset();
     }
 
-    public (List<MoveInfo> moves, List<Board> boards) GetHistory()
+    public void ProcessGameEnding()
     {
-        return (_madeMoves, _playedBoards);
+        Debug.Assert(!IsGameBeingPlayed);
+        _whitesPlayer.PostGameProcess(this, Side.White);
+        _blacksPlayer.PostGameProcess(this, Side.Black);
     }
 
     public void Dispose()
     {
         _ai.Dispose();
+        _whitesPlayer.Dispose();
+        _blacksPlayer.Dispose();
     }
 }

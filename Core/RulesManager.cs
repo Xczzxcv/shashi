@@ -6,7 +6,7 @@ public class RulesManager
 {
     public MovesCollection GetPossibleSideMoves(Side side, Board board)
     {
-        var possibleMoves = PoolsHolder.MovesCollectionPool.Get();
+        var possibleMoves = PoolsProvider.MovesCollectionPool.Get();
         var pieces = board.GetPieces(side);
         if (!TryAddPossibleTakes(pieces, possibleMoves, board))
         {
@@ -145,7 +145,7 @@ public class RulesManager
             var oneDir = new Vec2Int(attackDirection.X * -1, attackDirection.Y);
             var otherDir = new Vec2Int(attackDirection.X, attackDirection.Y * -1);
             var attackDirections = new[] {oneDir, otherDir};
-            var possibleMoves = PoolsHolder.MovesCollectionPool.Get();
+            var possibleMoves = PoolsProvider.MovesCollectionPool.Get();
             AddPossiblePieceTakes(possibleMoves, pieceAfterTake, board, false, attackDirections);
             var possibleMovesCount = possibleMoves.Count;
             possibleMoves.ReturnToPool();            
@@ -183,7 +183,7 @@ public class RulesManager
 
         attackDirections ??= _defaultAttackDirections;
 
-        var detectedEnemyPieces = PoolsHolder.PiecesCollectionPool.Get();
+        var detectedEnemyPieces = PoolsProvider.PiecesCollectionPool.Get();
         foreach (var attackDirection in attackDirections)
         {
             for (int detectRange = 1; detectRange <= maxDetectRange; detectRange++)

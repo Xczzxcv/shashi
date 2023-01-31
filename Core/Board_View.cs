@@ -2,12 +2,12 @@
 
 public partial struct Board
 {
-    private const char WhiteSqr = '█';
-    private const char EmptyBlackSqr = '░';
-    private const char WhiteChecker = '0';
-    private const char BlackChecker = '*';
-    private const char WhiteKing = 'W';
-    private const char BlackKing = 'B';
+    private const char WhiteSqrView = '█';
+    private const char EmptyBlackSqrView = '░';
+    private const char WhiteCheckerView = '0';
+    private const char BlackCheckerView = '*';
+    private const char WhiteKingView = 'W';
+    private const char BlackKingView = 'B';
 
     public readonly string GetView()
     {
@@ -20,13 +20,13 @@ public partial struct Board
                 var currPos = new Vec2Int(j, i);
                 if (!IsBlackSquare(currPos))
                 {
-                    resultStr += WhiteSqr;
+                    resultStr += WhiteSqrView;
                     continue;
                 }
 
                 if (!TryGetPiece(currPos, out var piece))
                 {
-                    resultStr += EmptyBlackSqr;
+                    resultStr += EmptyBlackSqrView;
                     continue;
                 }
 
@@ -34,22 +34,22 @@ public partial struct Board
                 {
                     if (piece.Rank == PieceRank.Checker)
                     {
-                        resultStr += WhiteChecker;
+                        resultStr += WhiteCheckerView;
                     }
                     else if (piece.Rank == PieceRank.King)
                     {
-                        resultStr += WhiteKing;
+                        resultStr += WhiteKingView;
                     }
                 }
                 else if (piece.Side == Side.Black)
                 {
                     if (piece.Rank == PieceRank.Checker)
                     {
-                        resultStr += BlackChecker;
+                        resultStr += BlackCheckerView;
                     }
                     else if (piece.Rank == PieceRank.King)
                     {
-                        resultStr += BlackKing;
+                        resultStr += BlackKingView;
                     }
                 }
             }

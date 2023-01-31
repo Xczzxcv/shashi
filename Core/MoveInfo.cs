@@ -1,6 +1,6 @@
 ﻿namespace Core;
 
-public struct MoveInfo
+public partial struct MoveInfo
 {
     public enum Type
     {
@@ -41,21 +41,18 @@ public struct MoveInfo
 
     public override string ToString()
     {
-        string infoString;
-        switch (MoveType)
-        {
-            case Type.Move:
-                infoString = Move.ToString();
-                break;
-            case Type.Take:
-                infoString = string.Join(", ", Takes.Select(take => take.ToString()));
-                break;
-            default:
-                infoString = string.Empty;
-                break;
-        }
-
+        var infoString = GetInfoString();
         return $"{MoveType}: {infoString}";
+    }
+
+    private string GetInfoString()
+    {
+        return MoveType switch
+        {
+            Type.Move => Move.ToString(),
+            Type.Take => string.Join(Take.MULTIPLE_SEPARATOR, Takes.Select(take => take.ToString())),
+            _ => string.Empty
+        };
     }
 
     public Vec2Int GetStartPiecePos()
@@ -66,28 +63,5 @@ public struct MoveInfo
             Type.Take => Takes[0].SrcPos,
             _ => throw ThrowHelper.WrongMoveTypeException(this),
         };
-    }
-}
-
-public struct Move
-{
-    public Vec2Int SrcPos;
-    public Vec2Int DestPos;
-
-    public override string ToString()
-    {
-        return $"{SrcPos.AsNotation()}->{DestPos.AsNotation()}";
-    }
-}
-
-public struct Take
-{
-    public Vec2Int SrcPos;
-    public Vec2Int DestPos;
-    public Vec2Int TakenPiecePos;
-
-    public override string ToString()
-    {
-        return $"{SrcPos.AsNotation()}X{TakenPiecePos.AsNotation()}>{DestPos.AsNotation()}";
     }
 }
