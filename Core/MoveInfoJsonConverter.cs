@@ -3,7 +3,7 @@ using System.Text.Json.Serialization;
 
 namespace Core;
 
-public class MoveInfoJsonConverter : JsonConverter<MoveInfo>
+internal class MoveInfoJsonConverter : JsonConverter<MoveInfo>
 {
     public override MoveInfo Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
     {

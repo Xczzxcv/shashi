@@ -1,6 +1,6 @@
 ﻿namespace Core;
 
-public class MockLogger : ILogger
+internal class MockLogger : ILogger
 {
     public void Init()
     { }

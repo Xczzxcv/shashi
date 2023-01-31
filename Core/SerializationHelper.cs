@@ -4,7 +4,7 @@ using System.Text.Unicode;
 
 namespace Core;
 
-public static class SerializationHelper
+internal static class SerializationHelper
 {
     public static readonly JsonSerializerOptions JsonSerializerOptions = new()
     {

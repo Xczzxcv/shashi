@@ -1,6 +1,6 @@
 ﻿namespace Core;
 
-public class LogManager
+internal class LogManager
 {
     private ILogger _logger;
 

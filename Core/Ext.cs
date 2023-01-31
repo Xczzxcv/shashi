@@ -2,7 +2,7 @@
 
 namespace Core;
 
-public static class HashsetExt
+internal static class HashsetExt
 {
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static T GetAny<T>(this HashSet<T> hashSet)
@@ -14,7 +14,7 @@ public static class HashsetExt
     }
 }
 
-public static class ListExt
+internal static class ListExt
 {
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static int LastIndex<T>(this List<T> list)
@@ -23,7 +23,7 @@ public static class ListExt
     }
 }
 
-public static class StringExt
+internal static class StringExt
 {
     public static int ParseNumber(this string str, int startNumberIndex, out int endNumberIndex)
     {
@@ -46,7 +46,7 @@ public static class StringExt
     }
 }
 
-public static class CharsSpanExt
+internal static class CharsSpanExt
 {
     public static Vec2Int ExtractPosFromChars(this ReadOnlySpan<char> chars, int startPosIndex, int endPosIndex)
     {

@@ -2,7 +2,7 @@
 
 namespace Core;
 
-public class RulesManager
+internal class RulesManager
 {
     public MovesCollection GetPossibleSideMoves(Side side, Board board)
     {

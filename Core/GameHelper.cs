@@ -1,10 +1,12 @@
-﻿namespace Core;
+﻿using System.Diagnostics;
+
+namespace Core;
 
 public static class GameHelper
 {
     public static async Task SimulateGame(Game game)
     {
-        DefaultLogger.Log(game.GetView());
+        DefaultLogger.Log($"\n{game.GetView()}");
 
         while (game.IsGameBeingPlayed)
         {
@@ -24,6 +26,7 @@ public static class GameHelper
         var game = new Game(whitesPlayer, blacksPlayer, logger);
         game.Init();
 
+        var totalGameSimulationTimeSw = Stopwatch.StartNew();
         for (int i = 0; i < gamesAmount; i++)
         {
             await SimulateGame(game);
@@ -31,8 +34,10 @@ public static class GameHelper
             game.Restart();
         }
 
+        totalGameSimulationTimeSw.Stop();
         game.Dispose();
 
-        DefaultLogger.Log($"There were {gamesAmount} tries of playing the game.");
+        DefaultLogger.Log($"There were {gamesAmount} tries of playing the game.\n" +
+                          $"Simulation duration is {totalGameSimulationTimeSw.Elapsed}");
     }
 }

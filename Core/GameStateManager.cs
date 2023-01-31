@@ -3,7 +3,7 @@ using System.Runtime.InteropServices;
 
 namespace Core;
 
-public class GameStateManager
+internal class GameStateManager
 {
     public GameState State { get; private set; }
 

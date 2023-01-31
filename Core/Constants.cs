@@ -1,6 +1,6 @@
 ﻿namespace Core;
 
-public static class Constants
+internal static class Constants
 {
     public const int BOARD_SIZE = 8; // must be even
     public const int BLACK_SQUARE_ROW_AMOUNT = BOARD_SIZE / 2;

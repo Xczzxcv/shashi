@@ -2,7 +2,7 @@
 
 namespace Core;
 
-public struct SideState : IEquatable<SideState>
+internal struct SideState : IEquatable<SideState>
 {
     public readonly Side Side;
     private ulong _state;

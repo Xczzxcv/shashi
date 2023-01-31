@@ -3,7 +3,7 @@ using System.Text.Json.Serialization;
 
 namespace Core;
 
-public class BoardJsonConverter : JsonConverter<Board>
+internal class BoardJsonConverter : JsonConverter<Board>
 {
     public override Board Read(ref Utf8JsonReader reader, Type typeToConvert, 
         JsonSerializerOptions options)
