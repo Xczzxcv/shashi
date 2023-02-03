@@ -41,6 +41,7 @@
 		"checker_cost": 1,
 		"king_cost": 2.5,
 		"near_promotion_buff": 0.2,
+		"use_precalculated_data": true,
 		"max_depth": 10
 	}
 }

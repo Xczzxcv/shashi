@@ -4,18 +4,33 @@ namespace Tests;
 
 public static class Setup
 {
-    public static Game Game(string boardState, Side currentMoveSide, int? aiDepth = null)
+    public static Game Game(string? boardState, Side? currentMoveSide, int? aiDepth = null, 
+        bool? usePreCalculatedData = false)
     {
         var loadedConfig = SerializationManager.LoadGameConfig();
 
-        loadedConfig.BoardConfig.BoardImgStateStrings = boardState.Split('\n');
-        loadedConfig.BoardConfig.CurrentMoveSide = currentMoveSide;
+        if (string.IsNullOrEmpty(boardState))
+        {
+            loadedConfig.BoardConfig.UseCustomInitBoardState = false;
+        }
+        else
+        {
+            loadedConfig.BoardConfig.BoardImgStateStrings = boardState.Split('\n');
+            loadedConfig.BoardConfig.UseCustomInitBoardState = true;
+            loadedConfig.BoardConfig.CurrentMoveSide = currentMoveSide.Value;
+        }
+
         
         if (aiDepth.HasValue)
         {
             loadedConfig.AiConfig.MaxDepth = aiDepth.Value;
         }
 
+        if (usePreCalculatedData.HasValue)
+        {
+            loadedConfig.AiConfig.UsePreCalculatedData = usePreCalculatedData.Value;
+        }
+        
         var game = Create.Game();
         game.Init(loadedConfig);
 

@@ -20,6 +20,8 @@ public class CheckersAi : IDisposable
         public float KingCost;
         [JsonInclude, JsonPropertyName("near_promotion_buff")]
         public float NearPromotionBuff;
+        [JsonInclude, JsonPropertyName("use_precalculated_data")]
+        public bool UsePreCalculatedData;
         [JsonInclude, JsonPropertyName("max_depth")]
         public int MaxDepth;
     }
@@ -46,7 +48,10 @@ public class CheckersAi : IDisposable
 
     private void InitPositionsCache()
     {
-        SerializationManager.LoadCachedRatingBoardsData(RatedBoardStatesCached);
+        if (_config.UsePreCalculatedData)
+        {
+            SerializationManager.LoadCachedRatingBoardsData(RatedBoardStatesCached);
+        }
 
         const int empiricPower = 8;
         const int maxCapacity = 100_000_000;
