@@ -39,10 +39,10 @@ internal class RulesManager
         new(-1, 1)
     };
     private readonly Vec2Int[] _moveDirections = DiagonalDirections;
-    private readonly Vec2Int[] _defaultAttackDirections = DiagonalDirections;
+    private readonly Vectors2IntCollection _defaultAttackDirections = new(DiagonalDirections);
 
     private int AddPossiblePieceTakes(MovesCollection possibleMoves, Piece piece, Board board,
-        bool noEnemiesMeansSuccess, Vec2Int[]? attackDirections = null)
+        bool noEnemiesMeansSuccess, Vectors2IntCollection? attackDirections = null)
     {
         var possibleTakesCounter = 0;
         var enemyPieces = DetectedEnemyPieces(piece, board, attackDirections);
@@ -75,7 +75,7 @@ internal class RulesManager
         return possibleTakesCounter;
     }
 
-    private List<Vec2Int> GetPossibleTakeDestPositions(Piece piece, Piece enemyPiece, Board board)
+    private Vectors2IntCollection GetPossibleTakeDestPositions(Piece piece, Piece enemyPiece, Board board)
     {
         var attackDirection = GetAttackDirection(piece, enemyPiece);
         var takeDestPositions = piece.Rank switch
@@ -95,11 +95,11 @@ internal class RulesManager
         return attackDirection;
     }
 
-    private List<Vec2Int> GetPossibleTakeDestPositionsForChecker(Piece enemyPiece, 
+    private Vectors2IntCollection GetPossibleTakeDestPositionsForChecker(Piece enemyPiece, 
         Vec2Int attackDirection, Board board)
     {
         const int checkerOvertakeRange = 1;
-        var takeDestPositions = new List<Vec2Int>();
+        var takeDestPositions = PoolsProvider.VectorsCollectionPool.Get();
         for (int overtakeRange = 1; overtakeRange <= checkerOvertakeRange; overtakeRange++)
         {
             var takeDestPos = enemyPiece.Position + attackDirection * overtakeRange;
@@ -119,13 +119,13 @@ internal class RulesManager
         return takeDestPositions;
     }
 
-    private List<Vec2Int> GetPossibleTakeDestPositionsForKing(Piece piece, Piece enemyPiece,
+    private Vectors2IntCollection GetPossibleTakeDestPositionsForKing(Piece piece, Piece enemyPiece,
         Vec2Int attackDirection, Board board)
     {
         const int kingOvertakeRange = Constants.BOARD_SIZE - 1;
         var hasAnyContinuationTakes = false;
-        var takeDestPositionsWithContinuation = new List<Vec2Int>();
-        var takeDestPositionsWithoutContinuation = new List<Vec2Int>();
+        var takeDestPositionsWithContinuation = PoolsProvider.VectorsCollectionPool.Get();
+        var takeDestPositionsWithoutContinuation = PoolsProvider.VectorsCollectionPool.Get();
         for (int overtakeRange = 1; overtakeRange <= kingOvertakeRange; overtakeRange++)
         {
             var takeDestPos = enemyPiece.Position + attackDirection * overtakeRange;
@@ -142,11 +142,10 @@ internal class RulesManager
             var pieceAfterTake = new Piece(piece, takeDestPos);
             PerformSingleTake(piece, enemyPiece, takeDestPos, ref board);
 
-            var oneDir = new Vec2Int(attackDirection.X * -1, attackDirection.Y);
-            var otherDir = new Vec2Int(attackDirection.X, attackDirection.Y * -1);
-            var attackDirections = new[] {oneDir, otherDir};
+            var attackDirections = GetAttackDirections(attackDirection);
             var possibleMoves = PoolsProvider.MovesCollectionPool.Get();
             AddPossiblePieceTakes(possibleMoves, pieceAfterTake, board, false, attackDirections);
+            attackDirections.ReturnToPool();
             var possibleMovesCount = possibleMoves.Count;
             possibleMoves.ReturnToPool();            
             
@@ -168,11 +167,24 @@ internal class RulesManager
             takeDestPositionsWithContinuation.AddRange(takeDestPositionsWithoutContinuation);
         }
 
+        takeDestPositionsWithoutContinuation.ReturnToPool();
+
         return takeDestPositionsWithContinuation;
     }
 
+    private static Vectors2IntCollection GetAttackDirections(Vec2Int attackDirection)
+    {
+        var oneDir = new Vec2Int(attackDirection.X * -1, attackDirection.Y);
+        var otherDir = new Vec2Int(attackDirection.X, attackDirection.Y * -1);
+
+        var attackDirections = PoolsProvider.VectorsCollectionPool.Get();
+        attackDirections.Add(oneDir);
+        attackDirections.Add(otherDir);
+        return attackDirections;
+    }
+
     private PiecesCollection DetectedEnemyPieces(Piece piece, Board board, 
-        Vec2Int[]? attackDirections = null)
+        Vectors2IntCollection? attackDirections = null)
     {
         var maxDetectRange = piece.Rank switch
         {
@@ -222,6 +234,7 @@ internal class RulesManager
         var possibleTakeDestPositions = GetPossibleTakeDestPositions(piece, checkedEnemyPiece, board);
         if (possibleTakeDestPositions.Count == 0)
         {
+            possibleTakeDestPositions.ReturnToPool();
             _takenPiecesPositions.Remove(checkedEnemyPiece.Position);
             return 0;
         }
@@ -239,10 +252,12 @@ internal class RulesManager
             _takesDone.Add(take);
             takesCount += AddPossiblePieceTakes(possibleMoves, pieceAfterTake, board, 
                 true);
-            _takesDone.Remove(take);
+            Debug.Assert(_takesDone.IndexOf(take) == _takesDone.LastIndex());
+            _takesDone.RemoveAt(_takesDone.LastIndex());
             RevertSingleTake(piece, pieceAfterTake, checkedEnemyPiece, ref board);
         }
-
+        
+        possibleTakeDestPositions.ReturnToPool();
         _takenPiecesPositions.Remove(checkedEnemyPiece.Position);
 
         return takesCount;

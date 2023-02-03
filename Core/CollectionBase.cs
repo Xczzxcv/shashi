@@ -9,6 +9,12 @@ public abstract class CollectionBase<T> : List<T>, IPoolable
     
     private IPool? _parentPool;
 
+    protected CollectionBase()
+    { }
+
+    protected CollectionBase(IEnumerable<T> collection) : base(collection)
+    { }
+
     public void Setup(int id, IPool parentPool)
     {
         Id = id;

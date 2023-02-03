@@ -188,7 +188,12 @@ internal class GameStateManager
             return false;
         }
 
-        var whiteKingsCount = whitePieces.Count(piece => piece.Rank == PieceRank.King);
+        var whiteKingsCount = 0;
+        foreach (var piece in whitePieces)
+        {
+            if (piece.Rank == PieceRank.King) whiteKingsCount++;
+        }
+
         whitePieces.ReturnToPool();
         if (whiteKingsCount < 3)
         {
