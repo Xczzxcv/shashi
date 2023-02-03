@@ -21,8 +21,11 @@ internal class LogManager
         _logger.Init();
     }
 
-    public void Log(string logMessage)
+    public void Log(string logMessage,
+        string memberName = "",
+        string sourceFilePath = "",
+        int sourceLineNumber = 0)
     {
-        _logger.Log(logMessage);
+        _logger.Log(logMessage, memberName, sourceFilePath, sourceLineNumber);
     }
 }

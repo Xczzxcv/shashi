@@ -214,14 +214,12 @@ public partial class Game : IDisposable
         };
     }
 
-    public int GetBoardHash()
+    public void Log(string logMessage,
+        [System.Runtime.CompilerServices.CallerMemberName] string memberName = "",
+        [System.Runtime.CompilerServices.CallerFilePath] string sourceFilePath = "",
+        [System.Runtime.CompilerServices.CallerLineNumber] int sourceLineNumber = 0)
     {
-        return _board.GetHashCode();
-    }
-
-    public void Log(string logMessage)
-    {
-        _logManager.Log(logMessage);
+        _logManager.Log(logMessage, memberName, sourceFilePath, sourceLineNumber);
     }
 
     public float RateCurrentPos()

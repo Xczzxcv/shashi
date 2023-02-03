@@ -4,10 +4,10 @@ namespace Shashi_console;
 
 public static class Program
 {
-    public static async Task Main()
+    public static Task Main()
     {
-        Player? blacksPlayer = new ExperiencedBotPlayer();
-        await GameHelper.SimulateGames(1, blacksPlayer: blacksPlayer);
+        M();
+        // await GameHelper.SimulateMultipleGames(1);
 
         DefaultLogger.Log($"Pruning stat. Pruned: {CheckersAi.PrunedMovesCount}. Not Pruned: {CheckersAi.NotPrunedMovesCount}");
         DefaultLogger.Log($"Moves Pool stat: size {PoolsProvider.MovesCollectionPool.CurrentSize}\n" +
@@ -23,5 +23,29 @@ public static class Program
         DefaultLogger.Log($"Get pieces stat: duration {PoolsProvider.GetPiecesSw.Elapsed} " +
                           $"calls counter {PoolsProvider.GetPiecesCallsCount} " +
                           $"avg call duration {PoolsProvider.GetPiecesSw.Elapsed / PoolsProvider.GetPiecesCallsCount}");
+        return Task.CompletedTask;
+    }
+
+    private static void M()
+    {
+        const int gamesAmount = 3;
+        Console.WriteLine($"Simulating {gamesAmount} games. Press enter to stop");
+        var cts = new CancellationTokenSource();
+        var simulateGamesThread = new Thread(() => GameSimulationFunc(gamesAmount, cts));
+        simulateGamesThread.Start();
+        Console.ReadLine();
+        cts.Cancel();
+        simulateGamesThread.Join();
+        cts.Dispose();
+    }
+
+    private static void GameSimulationFunc(int gamesAmount, CancellationTokenSource cts)
+    {
+        GameHelper.SimulateMultipleGames(gamesAmount, processAfterGameFunc:ProcessAfterGameFunc, cancellationToken: cts.Token);
+    }
+
+    private static void ProcessAfterGameFunc(Game game)
+    {
+        game.Log($"Game ended.");
     }
 }

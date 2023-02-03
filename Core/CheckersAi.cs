@@ -153,7 +153,7 @@ public class CheckersAi : IDisposable
         var beta = float.PositiveInfinity;
         const int depth = 0;
 
-        game.Log($"{side} have {possibleMoves.Count} moves. Their rates are:\n");
+        game.Log($"{side} have {possibleMoves.Count} moves. Their rates are:");
         for (var moveInd = 0; moveInd < possibleMoves.Count; moveInd++)
         {
             var oldBestMoveRating = bestMoveRating;
@@ -165,7 +165,7 @@ public class CheckersAi : IDisposable
                 chosenMove = possibleMove;
             }
 
-            game.Log($"{moveInd}) {possibleMove} — {oldBestMoveRating} —> {bestMoveRating}\n");
+            game.Log($"{moveInd}) {possibleMove} — {oldBestMoveRating} —> {bestMoveRating}");
             if (TryPrune(alpha, beta))
             {
                 game.Log("There is prune can be done");
