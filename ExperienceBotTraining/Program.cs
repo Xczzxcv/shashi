@@ -27,5 +27,4 @@ public static class Program
     {
         Console.WriteLine($"{gameIndex}) Game ended: {game.State}");
     }
-
 }

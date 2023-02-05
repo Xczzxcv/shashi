@@ -21,14 +21,8 @@ public static class SerializationManager
 
     public static void LoadCachedRatingBoardsData(Dictionary<Board, CheckersAi.RatedBoardState> ratedBoards)
     {
-        if (!SerializationHelper.TryReadFile(RatedBoardsPath, FileMode.OpenOrCreate, out var readBytes))
-        {
-            return;
-        }
-
-        var deserializedBoardsData = JsonSerializer
-            .Deserialize<Dictionary<Board, CheckersAi.RatedBoardState>>(readBytes, SerializationHelper.JsonSerializerOptions);
-        if (deserializedBoardsData == null)
+        if (!TryLoadSomeData<Dictionary<Board, CheckersAi.RatedBoardState>>(RatedBoardsPath,
+                FileMode.OpenOrCreate, out var deserializedBoardsData))
         {
             return;
         }
@@ -48,13 +42,7 @@ public static class SerializationManager
 
     public static Game.Config LoadGameConfig()
     {
-        if (!SerializationHelper.TryReadFile(GameConfigPath, FileMode.Open, out var readBytes))
-        {
-            throw new SerializationException($"Can't get {nameof(Game.Config)} from {GameConfigFilename}");
-        }
-
-        var gameConfig = JsonSerializer.Deserialize<Game.Config>(readBytes, SerializationHelper.JsonSerializerOptions);
-        if (gameConfig.Equals(default))
+        if (!TryLoadSomeData<Game.Config>(GameConfigPath, FileMode.Open, out var gameConfig))
         {
             throw new SerializationException($"Can't get {nameof(Game.Config)} from {GameConfigFilename}");
         }
@@ -70,14 +58,8 @@ public static class SerializationManager
 
     private static void LoadSideMoveRating(string sideMoveRatingsPath, SideMoveRatings sideMoves)
     {
-        if (!SerializationHelper.TryReadFile(sideMoveRatingsPath, FileMode.OpenOrCreate, out var readBytes))
-        {
-            return;
-        }
-
-        var deserializedMovesData = JsonSerializer
-            .Deserialize<SideMoveRatings>(readBytes, SerializationHelper.JsonSerializerOptions);
-        if (deserializedMovesData == null)
+        if (!TryLoadSomeData<SideMoveRatings>(sideMoveRatingsPath, FileMode.OpenOrCreate,
+                out var deserializedMovesData))
         {
             return;
         }
@@ -99,5 +81,27 @@ public static class SerializationManager
     private static void SaveSideMoveRatings(string sideMoveRatingsPath, SideMoveRatings sideMoves)
     {
         SerializationHelper.SaveDataToFile(sideMoveRatingsPath, sideMoves);
+    }
+
+    public static bool TryLoadSomeData<T>(string filepath, FileMode fileMode, out T resultData)
+    {
+        if (!SerializationHelper.TryReadFile(filepath, fileMode, out var readBytes))
+        {
+            if (fileMode != FileMode.OpenOrCreate && fileMode == FileMode.CreateNew)
+            {
+                throw new SerializationException($"Can't get {typeof(T)} from {filepath}");
+            }
+
+            resultData = default;
+            return false;
+        }
+
+        resultData = JsonSerializer.Deserialize<T>(readBytes, SerializationHelper.JsonSerializerOptions);
+        return resultData.Equals(default(T));
+    }
+
+    public static string GetFilePath(string filename)
+    {
+        return $"{FilesPath}{filename}{FilesExtension}";
     }
 }
