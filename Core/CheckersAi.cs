@@ -8,22 +8,12 @@ public class CheckersAi : IDisposable
     [Serializable]
     public struct Config
     {
-        [JsonInclude, JsonPropertyName("checker_square_coefficients")]
-        public float[] CheckersBoardSquareCoefficients;
-        [JsonInclude, JsonPropertyName("kings_square_coefficients")]
-        public float[] KingsBoardSquareCoefficients;
-        [JsonInclude, JsonPropertyName("loss_rating_amount")]
-        public float LossRatingAmount;
-        [JsonInclude, JsonPropertyName("checker_cost")]
-        public float CheckerCost;
-        [JsonInclude, JsonPropertyName("king_cost")]
-        public float KingCost;
-        [JsonInclude, JsonPropertyName("near_promotion_buff")]
-        public float NearPromotionBuff;
         [JsonInclude, JsonPropertyName("use_precalculated_data")]
         public bool UsePreCalculatedData;
         [JsonInclude, JsonPropertyName("max_depth")]
         public int MaxDepth;
+        [JsonInclude, JsonPropertyName("default_board_pos_rater")]
+        public DefaultBoardPositionRater.Config DefaultBoardPositionRater;
     }
 
     [Serializable]
@@ -38,10 +28,13 @@ public class CheckersAi : IDisposable
     private static readonly Dictionary<Board, RatedBoardState> RatedBoardStatesCached = new();
 
     private Config _config;
+    private IBoardPositionRater? _boardPositionRater;
 
-    public void Init(Config config)
+    public void Init(Config config, IBoardPositionRater? boardPositionRater = null)
     {
         _config = config;
+        _boardPositionRater = boardPositionRater 
+                              ?? new DefaultBoardPositionRater(_config.DefaultBoardPositionRater);
         DefaultLogger.Log($"Init: depth={_config.MaxDepth}");
         InitPositionsCache();
     }
@@ -58,77 +51,6 @@ public class CheckersAi : IDisposable
         var empiricNeededCapacity = (int) Math.Pow(_config.MaxDepth, empiricPower);
         var neededCapacity = Math.Min(maxCapacity, empiricNeededCapacity);
         RatedBoardStatesCached.EnsureCapacity(RatedBoardStatesCached.Count + neededCapacity);
-    }
-
-    public float RatePosition(Board board)
-    {
-        var whitePieces = board.GetPieces(Side.White);
-        var blackPieces = board.GetPieces(Side.Black);
-
-        var whitePieceRating = RatePiecesValue(whitePieces);
-        var blackPieceRating = RatePiecesValue(blackPieces);
-
-        var max = Math.Max(whitePieceRating, blackPieceRating);
-        var min = Math.Min(whitePieceRating, blackPieceRating);
-        var cft = MathF.Pow(max, 2) / MathF.Pow(min, 2);
-        
-        whitePieces.ReturnToPool();
-        blackPieces.ReturnToPool();
-        
-        return (whitePieceRating - blackPieceRating) * cft;
-    }
-
-    private float RatePiecesValue(PiecesCollection pieces)
-    {
-        var piecesSumRating = 0f;
-        foreach (var piece in pieces)
-        {
-            var pieceCost = GetPieceCost(piece);
-            var piecePositionRating = GetPiecePositionRating(piece);
-
-            piecesSumRating += pieceCost + piecePositionRating;
-        }
-
-        return piecesSumRating;
-    }
-
-    private float GetPieceCost(Piece piece)
-    {
-        return piece.Rank switch
-        {
-            PieceRank.Checker => _config.CheckerCost,
-            PieceRank.King => _config.KingCost,
-            _ => throw ThrowHelper.WrongPieceRankException(piece)
-        };
-    }
-
-    private float GetPiecePositionRating(Piece piece)
-    {
-        var blackBoardSquareIndex = SideState.GetBlackSquareBitIndex(piece.Position);
-        var piecePositionRating = piece.Rank switch
-        {
-            PieceRank.Checker => _config.CheckersBoardSquareCoefficients[blackBoardSquareIndex],
-            PieceRank.King => _config.KingsBoardSquareCoefficients[blackBoardSquareIndex],
-            _ => throw ThrowHelper.WrongPieceRankException(piece),
-        };
-
-        ApplyNearPromotionBuff(piece, ref piecePositionRating);
-
-        return piecePositionRating;
-    }
-
-    private void ApplyNearPromotionBuff(Piece piece, ref float  piecePositionRating)
-    {
-        if (piece.Rank != PieceRank.Checker)
-        {
-            return;
-        }
-
-        if (piece is {Side: Side.White, Position.Y: 1 or 2}
-            || piece is {Side: Side.Black, Position.Y: 5 or 6})
-        {
-            piecePositionRating += _config.NearPromotionBuff;
-        }
     }
 
     public MoveInfo ChooseMove(Game game, Side side)
@@ -191,13 +113,13 @@ public class CheckersAi : IDisposable
             return rating;
         }
         
-        var oldBoard = game.GetBoard();
+        var currBoard = game.GetBoard();
         if (!game.IsGameBeingPlayed)
         {
             return game.State switch
             {
-                GameState.WhiteWon => _config.LossRatingAmount,
-                GameState.BlackWon => -_config.LossRatingAmount,
+                GameState.WhiteWon => _config.DefaultBoardPositionRater.LossRatingAmount,
+                GameState.BlackWon => -_config.DefaultBoardPositionRater.LossRatingAmount,
                 GameState.Draw => 0,
                 _ => throw ThrowHelper.WrongSideException(side),
             };
@@ -210,7 +132,7 @@ public class CheckersAi : IDisposable
             if (noTakes)
             {
                 possibleMoves.ReturnToPool();
-                return RatePosition(oldBoard);
+                return _boardPositionRater.RatePosition(currBoard, side);
             }
         }
 
@@ -359,23 +281,10 @@ public class CheckersAi : IDisposable
 
     private static void UpdateCachedBoardRating(Board board, int analyzedDepth, float moveRating)
     {
-        RatedBoardState ratedBoardState;
+        CheckersAi.RatedBoardState ratedBoardState;
         ratedBoardState.Rating = moveRating;
         ratedBoardState.AnalyzedDepth = analyzedDepth;
         RatedBoardStatesCached[board] = ratedBoardState;
-    }
-
-    private int GetBestMoveIndex(in Span<float> possibleMoveRatings, Side side)
-    {
-        switch (side)
-        {
-            case Side.White:
-                return GetMaxIndex(possibleMoveRatings);
-            case Side.Black:
-                return GetMinIndex(possibleMoveRatings);
-            default:
-                throw ThrowHelper.WrongSideException(side);
-        }
     }
 
     private static int GetMaxIndex(in Span<float> possibleMoveRatings)
@@ -410,6 +319,11 @@ public class CheckersAi : IDisposable
         }
 
         return minMoveRatingInd;
+    }
+
+    public float RatePosition(Board board, Side side)
+    {
+        return _boardPositionRater.RatePosition(board, side);
     }
 
     public void Dispose()

@@ -146,11 +146,7 @@ public struct SideState : IEquatable<SideState>
 
     public readonly PiecesCollection GetPieces()
     {
-        PoolsProvider.GetPiecesCallsCount++;
-        PoolsProvider.GetPiecesSw.Start();
         var resultPieces = PoolsProvider.PiecesCollectionPool.Get();
-        // var resultPieces = new PiecesCollection(INIT_CHECKERS_COUNT);
-        PoolsProvider.GetPiecesSw.Stop();
 
         for (int i = CheckersPartShift; i < KingsPartShift; i++)
         {

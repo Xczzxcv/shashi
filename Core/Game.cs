@@ -48,10 +48,10 @@ public partial class Game : IDisposable
         _logManager.Setup(logger);
     }
     
-    public void Init(Config? config = null)
+    public void Init(Config? config = null, IBoardPositionRater? boardPositionRater = null)
     {
         SetupConfig(config);
-        _ai.Init(_config.AiConfig);
+        _ai.Init(_config.AiConfig, boardPositionRater);
         SetupBoard();
         SetupSide();
     }
@@ -224,7 +224,7 @@ public partial class Game : IDisposable
 
     public float RateCurrentPos()
     {
-        return _ai.RatePosition(_board);
+        return _ai.RatePosition(_board, CurrMoveSide);
     }
 
     public void TakeBackLastMove()

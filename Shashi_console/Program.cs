@@ -6,7 +6,10 @@ public static class Program
 {
     public static async Task Main()
     {
-        await GameHelper.SimulateMultipleGames(1);
+        await GameHelper.SimulateMultipleGames(new GameHelper.GameSimulationArgs
+        {
+            GamesAmount = 1,
+        });
         GameHelper.LogPostRunStats();
     }
 }

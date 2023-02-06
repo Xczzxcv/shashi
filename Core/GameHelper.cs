@@ -20,24 +20,34 @@ public static class GameHelper
         game.ProcessGameEnding();
     }
 
-    public delegate void ProcessAfterGameFunc(Game game, int gameIndex);
-    public static async Task SimulateMultipleGames(int gamesAmount, 
-        Player? whitesPlayer = null, Player? blacksPlayer = null, ILogger? logger = null,
-        ProcessAfterGameFunc? processAfterGameFunc = null, CancellationToken cancellationToken = default)
+    public struct GameSimulationArgs
     {
-        var game = new Game(whitesPlayer, blacksPlayer, logger);
-        game.Init();
+        public CancellationToken CancellationToken;
+        public ProcessAfterGameFunc? ProcessAfterGameFunc;
+        public IBoardPositionRater? BoardPositionRater;
+        public Game.Config? GameConfig;
+        public ILogger? Logger;
+        public Player? BlacksPlayer;
+        public Player? WhitesPlayer;
+        public int GamesAmount;
+    }
+
+    public delegate void ProcessAfterGameFunc(Game game, int gameIndex);
+    public static async Task SimulateMultipleGames(GameSimulationArgs args)
+    {
+        var game = new Game(args.WhitesPlayer, args.BlacksPlayer, args.Logger);
+        game.Init(args.GameConfig, args.BoardPositionRater);
 
         var totalGameSimulationTimeSw = new Stopwatch();
-        for (int i = 0; i < gamesAmount; i++)
+        for (int i = 0; i < args.GamesAmount; i++)
         {
             totalGameSimulationTimeSw.Start();
             await SimulateGame(game);
             totalGameSimulationTimeSw.Stop();
 
-            processAfterGameFunc?.Invoke(game, i);
+            args.ProcessAfterGameFunc?.Invoke(game, i);
 
-            if (cancellationToken.IsCancellationRequested)
+            if (args.CancellationToken.IsCancellationRequested)
             {
                 EndSimulation(i + 1, game, totalGameSimulationTimeSw);
                 return;
@@ -46,7 +56,7 @@ public static class GameHelper
             game.Restart();
         }
 
-        EndSimulation(gamesAmount, game, totalGameSimulationTimeSw);
+        EndSimulation(args.GamesAmount, game, totalGameSimulationTimeSw);
     }
 
     private static void EndSimulation(int gamesAmount, Game game, Stopwatch totalGameSimulationTimeSw)
@@ -61,18 +71,8 @@ public static class GameHelper
     {
         DefaultLogger.Log(
             $"Pruning stat. Pruned: {CheckersAi.PrunedMovesCount}. Not Pruned: {CheckersAi.NotPrunedMovesCount}");
-        DefaultLogger.Log($"Moves Pool stat: size {PoolsProvider.MovesCollectionPool.CurrentSize}\n" +
-                          $"free {PoolsProvider.MovesCollectionPool.FreeTakenCounter} " +
-                          $"spawned {PoolsProvider.MovesCollectionPool.SpawnedTakenCounter}\n" +
-                          $"current: free {PoolsProvider.MovesCollectionPool.CurrentFreeCount} " +
-                          $"rented {PoolsProvider.MovesCollectionPool.CurrentRentedCount}");
-        DefaultLogger.Log($"Pieces Pool stat: size {PoolsProvider.PiecesCollectionPool.CurrentSize}\n" +
-                          $"free {PoolsProvider.PiecesCollectionPool.FreeTakenCounter} " +
-                          $"spawned {PoolsProvider.PiecesCollectionPool.SpawnedTakenCounter}\n" +
-                          $"current: free {PoolsProvider.PiecesCollectionPool.CurrentFreeCount} " +
-                          $"rented {PoolsProvider.PiecesCollectionPool.CurrentRentedCount}");
-        DefaultLogger.Log($"Get pieces stat: duration {PoolsProvider.GetPiecesSw.Elapsed} " +
-                          $"calls counter {PoolsProvider.GetPiecesCallsCount} " +
-                          $"avg call duration {PoolsProvider.GetPiecesSw.Elapsed / PoolsProvider.GetPiecesCallsCount}");
+        PoolsProvider.MovesCollectionPool.LogPoolStat();
+        PoolsProvider.PiecesCollectionPool.LogPoolStat();
+        PoolsProvider.VectorsCollectionPool.LogPoolStat();
     }
 }

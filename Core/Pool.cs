@@ -98,4 +98,13 @@ public class Pool<T> : IPool
         _freeThings.Add(index);
         _content[index].Reset();
     }
+
+    public void LogPoolStat()
+    {
+        DefaultLogger.Log($"{typeof(T)} Pool stat: size {CurrentSize}\n" +
+                          $"free {FreeTakenCounter} " +
+                          $"spawned {SpawnedTakenCounter}\n" +
+                          $"current: free {CurrentFreeCount} " +
+                          $"rented {CurrentRentedCount}");
+    }
 }

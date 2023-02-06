@@ -15,10 +15,13 @@ public static class Program
             Console.WriteLine("Simulation will be stopped as soon as current game will end");
             cts.Cancel();
         });
-        await GameHelper.SimulateMultipleGames(gamesAmount,
-            blacksPlayer:new ExperiencedBotPlayer(),
-            processAfterGameFunc: ProcessAfterGameFunc,
-            cancellationToken: cts.Token);
+        await GameHelper.SimulateMultipleGames(new GameHelper.GameSimulationArgs
+        {
+            GamesAmount = gamesAmount,
+            BlacksPlayer = new ExperiencedBotPlayer(),
+            ProcessAfterGameFunc = ProcessAfterGameFunc,
+            CancellationToken = cts.Token,
+        });
         
         GameHelper.LogPostRunStats();
     }

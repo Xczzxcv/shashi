@@ -97,7 +97,7 @@ public static class SerializationManager
         }
 
         resultData = JsonSerializer.Deserialize<T>(readBytes, SerializationHelper.JsonSerializerOptions);
-        return resultData.Equals(default(T));
+        return !resultData.Equals(default(T));
     }
 
     public static string GetFilePath(string filename)
