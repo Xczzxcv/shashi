@@ -1,11 +1,11 @@
 ﻿using System.Diagnostics;
 using System.Text.Json.Serialization;
 
-namespace ExperienceBotTraining.NeuralNet;
+namespace Core.NeuralNet;
 
-internal class NeuralNetLayersConnection
+public class NeuralNetLayersConnection
 {
-    internal struct Config
+    public struct Config
     {
         [JsonInclude, JsonPropertyName("weights")]
         public double[] Weights;
@@ -17,6 +17,7 @@ internal class NeuralNetLayersConnection
     private readonly double[] _weights;
 
     public double[] Result { get; }
+    public int WeightsAmount => _weights.Length;
 
     public NeuralNetLayersConnection(NeuralNetLayer srcLayer, NeuralNetLayer destLayer)
     {
@@ -64,5 +65,24 @@ internal class NeuralNetLayersConnection
         var startSliceIndex = _srcLayer.Capacity * index;
         var sliceLength = _srcLayer.Capacity;
         return _weights.AsSpan().Slice(startSliceIndex, sliceLength);
+    }
+
+    public Config GetConfig()
+    {
+        return new Config
+        {
+            Weights = _weights,
+        };
+    }
+
+    public void VaryValues(Random rand)
+    {
+        for (var i = 0; i < _weights.Length; i++)
+        {
+            var weight = _weights[i];
+            var newWeight = NeuralNetHelper.VaryValue(weight, 
+                RateBoardNeuralNet.OFFSPRING_VALUE_VARY_AMOUNT, rand);
+            _weights[i] = newWeight;
+        }
     }
 }

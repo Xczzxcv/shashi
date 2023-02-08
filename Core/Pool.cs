@@ -21,21 +21,21 @@ public class Pool<T> : IPool
         _currentIndex = 0;
     }
 
-    public long FreeTakenCounter;
-    public long SpawnedTakenCounter;
-    public int CurrentSize => _content.Count;
-    public int CurrentFreeCount => _freeThings.Count;
-    public int CurrentRentedCount => _rentedThings.Count;
+    private long _freeTakenCounter;
+    private long _spawnedTakenCounter;
+    private int CurrentSize => _content.Count;
+    private int CurrentFreeCount => _freeThings.Count;
+    private int CurrentRentedCount => _rentedThings.Count;
 
     public T Get()
     {
         if (TryGetFree(out var poolable))
         {
-            FreeTakenCounter++;
+            _freeTakenCounter++;
         }
         else
         {
-            SpawnedTakenCounter++;
+            _spawnedTakenCounter++;
             poolable = SpawnSomeNew();
         }
 
@@ -99,12 +99,12 @@ public class Pool<T> : IPool
         _content[index].Reset();
     }
 
-    public void LogPoolStat()
+    public void LogPoolStat(Game game)
     {
-        DefaultLogger.Log($"{typeof(T)} Pool stat: size {CurrentSize}\n" +
-                          $"free {FreeTakenCounter} " +
-                          $"spawned {SpawnedTakenCounter}\n" +
-                          $"current: free {CurrentFreeCount} " +
-                          $"rented {CurrentRentedCount}");
+        game.Log($"{typeof(T)} Pool stat: size {CurrentSize}\n" +
+                 $"free {_freeTakenCounter} " +
+                 $"spawned {_spawnedTakenCounter}\n" +
+                 $"current: free {CurrentFreeCount} " +
+                 $"rented {CurrentRentedCount}");
     }
 }

@@ -1,8 +1,19 @@
-﻿namespace Core;
+﻿using Core.NeuralNet;
 
-public static class PoolsProvider
+namespace Core;
+
+public class PoolsProvider
 {
-    public static readonly Pool<PiecesCollection> PiecesCollectionPool = new();
-    public static readonly Pool<MovesCollection> MovesCollectionPool = new();
-    public static readonly Pool<Vectors2IntCollection> VectorsCollectionPool = new();
+    public readonly Pool<PiecesCollection> PiecesCollectionPool = new();
+    public readonly Pool<MovesCollection> MovesCollectionPool = new();
+    public readonly Pool<Vectors2IntCollection> VectorsCollectionPool = new();
+    public readonly Pool<BoardNeuralNetInput> BoardNeuralNetInputPool = new();
+    
+    public void LogPoolsStat(Game game)
+    {
+        MovesCollectionPool.LogPoolStat(game);
+        PiecesCollectionPool.LogPoolStat(game);
+        VectorsCollectionPool.LogPoolStat(game);
+        BoardNeuralNetInputPool.LogPoolStat(game);
+    }
 }

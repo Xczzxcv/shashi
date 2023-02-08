@@ -18,13 +18,14 @@ public partial class Game : IDisposable
     public bool IsGameBeingPlayed => _gameStateManager.State == GameState.GameBeingPlayed;
     public GameState State => _gameStateManager.State;
     public int CurrentTurnIndex => _moveIndex / 2;
+    public DefaultBoardPositionRater.Config DefaultBoardPosRaterConfig => _config.AiConfig.DefaultBoardPositionRater;
 
     private readonly RulesManager _rulesManager;
     private readonly LogManager _logManager;
     private readonly Player _whitesPlayer;
     private readonly Player _blacksPlayer;
-    private readonly CheckersAi _ai;
     private readonly GameStateManager _gameStateManager;
+    private readonly PoolsProvider _poolsProvider;
     private readonly List<Board> _playedBoards = new();
     private readonly List<MoveInfo> _madeMoves = new();
 
@@ -34,26 +35,27 @@ public partial class Game : IDisposable
 
     public Game(Player? whitesPlayer, Player? blacksPlayer, ILogger? logger = null)
     {
-        _rulesManager = new RulesManager();
+        _poolsProvider = new PoolsProvider();
+
+        _rulesManager = new RulesManager(_poolsProvider);
         _gameStateManager = new GameStateManager(this, _rulesManager);
 
-        _ai = new CheckersAi();
-        
-        _whitesPlayer = whitesPlayer ?? new BotPlayer(_ai);
-        _whitesPlayer.Init();
-        _blacksPlayer = blacksPlayer ?? new BotPlayer(_ai);
-        _blacksPlayer.Init();
+        _whitesPlayer = whitesPlayer ?? new BotPlayer();
+        _blacksPlayer = blacksPlayer ?? new BotPlayer();
 
         _logManager = new LogManager();
         _logManager.Setup(logger);
     }
     
-    public void Init(Config? config = null, IBoardPositionRater? boardPositionRater = null)
+    public void Init(Config? config = null)
     {
         SetupConfig(config);
-        _ai.Init(_config.AiConfig, boardPositionRater);
         SetupBoard();
         SetupSide();
+
+        Log($"Init: depth={_config.AiConfig.MaxDepth}");
+        _whitesPlayer.Init(_config.AiConfig);
+        _blacksPlayer.Init(_config.AiConfig);
     }
 
     private void SetupConfig(Config? config)
@@ -93,7 +95,7 @@ public partial class Game : IDisposable
 
     public MovesCollection GetPossibleSideMoves(Side side)
     {
-        return _rulesManager.GetPossibleSideMoves(side, _board);
+        return _rulesManager.GetPossibleSideMoves(side, _board, _poolsProvider);
     }
 
     public async Task<(MoveInfo, GameState)> MakeMove()
@@ -222,11 +224,6 @@ public partial class Game : IDisposable
         _logManager.Log(logMessage, memberName, sourceFilePath, sourceLineNumber);
     }
 
-    public float RateCurrentPos()
-    {
-        return _ai.RatePosition(_board, CurrMoveSide);
-    }
-
     public void TakeBackLastMove()
     {
         var lastBoard = _playedBoards[^1];
@@ -248,17 +245,16 @@ public partial class Game : IDisposable
         _gameStateManager.ProcessGameReset();
     }
 
-    public void ProcessGameEnding()
+    public PoolsProvider GetPoolsProvider()
     {
-        Debug.Assert(!IsGameBeingPlayed);
-        _whitesPlayer.PostGameProcess(this, Side.White);
-        _blacksPlayer.PostGameProcess(this, Side.Black);
+        return _poolsProvider;
     }
 
     public void Dispose()
     {
-        _ai.Dispose();
         _whitesPlayer.Dispose();
         _blacksPlayer.Dispose();
+
+        _poolsProvider.LogPoolsStat(this);
     }
 }

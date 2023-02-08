@@ -1,5 +1,6 @@
 ﻿using System.Runtime.Serialization;
 using System.Text.Json;
+using System.Text.Json.Serialization;
 
 namespace Core;
 
@@ -14,30 +15,49 @@ public static class SerializationManager
     private const string GameConfigFilename = "GameConfig";
     private const string GameConfigPath = $"{FilesPath}{GameConfigFilename}{FilesExtension}";
 
-    private const string WhiteMoveRatingsFilename = "MoveRatings_White";
-    private const string BlackMoveRatingsFilename = "MoveRatings_Black";
-    private const string WhiteMoveRatingsPath = $"{FilesPath}{WhiteMoveRatingsFilename}{FilesExtension}";
-    private const string BlackMoveRatingsPath = $"{FilesPath}{BlackMoveRatingsFilename}{FilesExtension}";
-
-    public static void LoadCachedRatingBoardsData(Dictionary<Board, CheckersAi.RatedBoardState> ratedBoards)
+    public static void LoadCachedRatingBoardsData(SideRatedBoardsStates whiteRatedBoards, 
+        SideRatedBoardsStates blackRatedBoards)
     {
-        if (!TryLoadSomeData<Dictionary<Board, CheckersAi.RatedBoardState>>(RatedBoardsPath,
+        if (!TryLoadSomeData<RatedBoardsData>(RatedBoardsPath,
                 FileMode.OpenOrCreate, out var deserializedBoardsData))
         {
             return;
         }
 
-        foreach (var (key, value) in deserializedBoardsData)
-        {
-            ratedBoards.Add(key, value);
-        }
+        FillBoardsData(whiteRatedBoards, deserializedBoardsData.WhiteRatedBoards);
+        FillBoardsData(blackRatedBoards, deserializedBoardsData.BlackRatedBoards);
 
-        DefaultLogger.Log($"Cached rating boards data loaded ({deserializedBoardsData.Count} entities)");
+        var deserializedDataCount = deserializedBoardsData.WhiteRatedBoards.Count
+            + deserializedBoardsData.BlackRatedBoards.Count;
+        DefaultLogger.Log($"Cached rating boards data loaded ({deserializedDataCount} entities)");
+
+        void FillBoardsData(SideRatedBoardsStates boardsToFill, SideRatedBoardsStates deserializedData)
+        {
+            foreach (var (key, value) in deserializedData)
+            {
+                boardsToFill.Add(key, value);
+            }
+        }
     }
 
-    public static void SaveCachedRatedBoardsData(Dictionary<Board, CheckersAi.RatedBoardState> ratedBoards)
+    [Serializable]
+    private struct RatedBoardsData
     {
-        SerializationHelper.SaveDataToFile(RatedBoardsPath, ratedBoards);
+        [JsonInclude, JsonPropertyName("white")]
+        public SideRatedBoardsStates WhiteRatedBoards;
+        [JsonInclude, JsonPropertyName("black")]
+        public SideRatedBoardsStates BlackRatedBoards;
+    } 
+
+    public static void SaveCachedRatedBoardsData(SideRatedBoardsStates whiteRatedBoards, 
+        SideRatedBoardsStates blackRatedBoards)
+    {
+        var ratedBoardsData = new RatedBoardsData
+        {
+            WhiteRatedBoards = whiteRatedBoards,
+            BlackRatedBoards = blackRatedBoards,
+        };
+        SaveSomeData(RatedBoardsPath, ratedBoardsData);
     }
 
     public static Game.Config LoadGameConfig()
@@ -48,39 +68,6 @@ public static class SerializationManager
         }
 
         return gameConfig;
-    }
-
-    public static void LoadMoveRatings(SideMoveRatings whiteMoves, SideMoveRatings blackMoves)
-    {
-        LoadSideMoveRating(WhiteMoveRatingsPath, whiteMoves);
-        LoadSideMoveRating(BlackMoveRatingsPath, blackMoves);
-    }
-
-    private static void LoadSideMoveRating(string sideMoveRatingsPath, SideMoveRatings sideMoves)
-    {
-        if (!TryLoadSomeData<SideMoveRatings>(sideMoveRatingsPath, FileMode.OpenOrCreate,
-                out var deserializedMovesData))
-        {
-            return;
-        }
-
-        foreach (var (key, value) in deserializedMovesData)
-        {
-            sideMoves.Add(key, value);
-        }
-
-        DefaultLogger.Log($"Cached move ratings data loaded ({deserializedMovesData.Count} entities from {sideMoveRatingsPath})");
-    }
-
-    public static void SaveMoveRatings(SideMoveRatings whiteMoves, SideMoveRatings blackMoves)
-    {
-        SaveSideMoveRatings(WhiteMoveRatingsPath, whiteMoves);
-        SaveSideMoveRatings(BlackMoveRatingsPath, blackMoves);
-    }
-
-    private static void SaveSideMoveRatings(string sideMoveRatingsPath, SideMoveRatings sideMoves)
-    {
-        SerializationHelper.SaveDataToFile(sideMoveRatingsPath, sideMoves);
     }
 
     public static bool TryLoadSomeData<T>(string filepath, FileMode fileMode, out T resultData)
@@ -98,6 +85,11 @@ public static class SerializationManager
 
         resultData = JsonSerializer.Deserialize<T>(readBytes, SerializationHelper.JsonSerializerOptions);
         return !resultData.Equals(default(T));
+    }
+    
+    public static void SaveSomeData<T>(string filePath, T data)
+    {
+        SerializationHelper.SaveDataToFile(filePath, data);
     }
 
     public static string GetFilePath(string filename)

@@ -43,7 +43,7 @@ internal static class SerializationHelper
     {
         DefaultLogger.Log($"Start saving data {data} to file {filePath}");
         var currentPath = Directory.GetCurrentDirectory();
-        var destFile = new FileStream(currentPath + filePath, FileMode.OpenOrCreate);
+        var destFile = new FileStream(currentPath + filePath, FileMode.Create);
         JsonSerializer.Serialize(destFile, data, JsonSerializerOptions);
 
         destFile.Close();

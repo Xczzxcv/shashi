@@ -144,9 +144,9 @@ public struct SideState : IEquatable<SideState>
         return _state.ToString();
     }
 
-    public readonly PiecesCollection GetPieces()
+    public readonly PiecesCollection GetPieces(PoolsProvider poolsProvider)
     {
-        var resultPieces = PoolsProvider.PiecesCollectionPool.Get();
+        var resultPieces = poolsProvider.PiecesCollectionPool.Get();
 
         for (int i = CheckersPartShift; i < KingsPartShift; i++)
         {

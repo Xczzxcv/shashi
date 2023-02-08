@@ -1,5 +1,4 @@
-﻿using System;
-using System.Threading.Tasks;
+﻿using System.Threading.Tasks;
 using Core;
 using NUnit.Framework;
 
@@ -25,9 +24,11 @@ public class AiTests
         const float minRatingDiff = 2;
 
         var game = Setup.Game(boardState, Side.White, twoMoveAiCalculationDepth);
-        
+        var boardPosRater = new DefaultBoardPositionRater(game.DefaultBoardPosRaterConfig);
+        var poolsProvider = game.GetPoolsProvider();
+
         // Act.
-        var ratingBefore = game.RateCurrentPos();
+        var ratingBefore = boardPosRater.RatePosition(game.GetBoard(), game.CurrMoveSide, poolsProvider);
         DefaultLogger.Log($"Board before:\n{game.GetView()}");
 
         await game.MakeMove();
@@ -36,7 +37,7 @@ public class AiTests
         await game.MakeMove();
         await game.MakeMove();
 
-        var ratingAfter = game.RateCurrentPos();
+        var ratingAfter = boardPosRater.RatePosition(game.GetBoard(), game.CurrMoveSide, poolsProvider);
         DefaultLogger.Log($"Board before:\n{game.GetView()}");
 
         var ratingDiff = ratingAfter - ratingBefore;

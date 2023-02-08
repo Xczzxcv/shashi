@@ -3,14 +3,14 @@
 		"use_custom": false,
 		"current_move_side": "white",
 		"board_state": [
-			"8|█░█B█░█░",
+			"8|█░█W█░█░",
 			"7|░█░█░█░█",
-			"4|█░█░█░█B",
+			"6|█░█░█░█░",
 			"5|░█░█░█░█",
-			"4|█░█░█░█░",
-			"3|░█░█░█░█",
-			"2|█░█B█░█W",
-			"1|░█░█░█░█",
+			"4|█░█*█░█0",
+			"3|*█░█░█0█",
+			"2|█░█░█░█░",
+			"1|░█0█0█░█",
 			"  ABCDEFGH",
 		],
 		"white_side": 0,
@@ -43,7 +43,8 @@
 			"king_cost": 2.5,
 			"near_promotion_buff": 0.2,
 		},
-		"use_precalculated_data": true,
-		"max_depth": 8
+		"use_precalculated_data": false,
+		"cache_board_rating": true,
+		"max_depth": 4
 	}
 }

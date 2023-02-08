@@ -4,27 +4,32 @@ namespace Core;
 
 public static class GameHelper
 {
-    public static async Task SimulateGame(Game game)
+    public static async Task<GameState> SimulateGame(Game game, bool enableLogging = true)
     {
-        game.Log($"\n{game.GetView()}");
+        if (enableLogging)
+        {
+            game.Log($"\n{game.GetView()}");
+        }
 
         while (game.IsGameBeingPlayed)
         {
             var currMoveSide = game.CurrMoveSide;
             var (chosenMove, gameState) = await game.MakeMove();
-            game.Log($"{currMoveSide} chose {chosenMove}");
-            game.Log($"After this move game state: {gameState}");
-            game.Log($"\n{game.GetView()}");
+            if (enableLogging)
+            {
+                game.Log($"{currMoveSide} chose {chosenMove}");
+                game.Log($"After this move game state: {gameState}");
+                game.Log($"\n{game.GetView()}");
+            }
         }
 
-        game.ProcessGameEnding();
+        return game.State;
     }
 
     public struct GameSimulationArgs
     {
         public CancellationToken CancellationToken;
         public ProcessAfterGameFunc? ProcessAfterGameFunc;
-        public IBoardPositionRater? BoardPositionRater;
         public Game.Config? GameConfig;
         public ILogger? Logger;
         public Player? BlacksPlayer;
@@ -36,7 +41,7 @@ public static class GameHelper
     public static async Task SimulateMultipleGames(GameSimulationArgs args)
     {
         var game = new Game(args.WhitesPlayer, args.BlacksPlayer, args.Logger);
-        game.Init(args.GameConfig, args.BoardPositionRater);
+        game.Init(args.GameConfig);
 
         var totalGameSimulationTimeSw = new Stopwatch();
         for (int i = 0; i < args.GamesAmount; i++)
@@ -71,8 +76,5 @@ public static class GameHelper
     {
         DefaultLogger.Log(
             $"Pruning stat. Pruned: {CheckersAi.PrunedMovesCount}. Not Pruned: {CheckersAi.NotPrunedMovesCount}");
-        PoolsProvider.MovesCollectionPool.LogPoolStat();
-        PoolsProvider.PiecesCollectionPool.LogPoolStat();
-        PoolsProvider.VectorsCollectionPool.LogPoolStat();
     }
 }

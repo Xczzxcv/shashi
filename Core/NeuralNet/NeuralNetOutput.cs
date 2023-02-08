@@ -1,10 +1,10 @@
 ﻿using System.Text.Json.Serialization;
 
-namespace ExperienceBotTraining.NeuralNet;
+namespace Core.NeuralNet;
 
-internal class NeuralNetOutput
+public class NeuralNetOutput
 {
-    internal struct Config
+    public struct Config
     {
         [JsonInclude, JsonPropertyName("weights")]
         public double[] Weights;
@@ -15,6 +15,7 @@ internal class NeuralNetOutput
     private readonly double[] _weights;
 
     public double Result { get; private set; }
+    public int WeightsAmount => _weights.Length;
 
     public NeuralNetOutput(string name, params NeuralNetLayer[] prevLayers)
     {
@@ -56,7 +57,7 @@ internal class NeuralNetOutput
         var totalLayerValue = 0d;
         for (int i = 0; i < layer.Capacity; i++)
         {
-            var layerValue = layer.Result[startIndex + i];
+            var layerValue = layer.Result[i];
             var weight = _weights[startIndex + i];
             totalLayerValue += layerValue * weight;
         }
@@ -68,5 +69,24 @@ internal class NeuralNetOutput
     private static long GetLayersCapacity(NeuralNetLayer[] layers)
     {
         return layers.Sum(layer => layer.Capacity);
+    }
+
+    public Config GetConfig()
+    {
+        return new Config
+        {
+            Weights = _weights,
+        };
+    }
+
+    public void VaryValues(Random rand)
+    {
+        for (var i = 0; i < _weights.Length; i++)
+        {
+            var weight = _weights[i];
+            var newWeight = NeuralNetHelper.VaryValue(weight, 
+                RateBoardNeuralNet.OFFSPRING_VALUE_VARY_AMOUNT, rand);
+            _weights[i] = newWeight;
+        }
     }
 }

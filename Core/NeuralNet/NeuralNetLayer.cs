@@ -1,11 +1,11 @@
 ﻿using System.Diagnostics;
 using System.Text.Json.Serialization;
 
-namespace ExperienceBotTraining.NeuralNet;
+namespace Core.NeuralNet;
 
-internal class NeuralNetLayer
+public class NeuralNetLayer
 {
-    internal struct Config
+    public struct Config
     {
         [JsonInclude, JsonPropertyName("biases")]
         public double[] Biases;
@@ -52,5 +52,24 @@ internal class NeuralNetLayer
     private double ActivationFunc(double inputValue, double bias)
     {
         return Math.Tanh(inputValue + bias);
+    }
+
+    public Config GetConfig()
+    {
+        return new Config
+        {
+            Biases = _biases,
+        };
+    }
+
+    public void VaryValues(Random rand)
+    {
+        for (var i = 0; i < _biases.Length; i++)
+        {
+            var bias = _biases[i];
+            var newBias = NeuralNetHelper.VaryValue(bias, 
+                RateBoardNeuralNet.OFFSPRING_VALUE_VARY_AMOUNT, rand);
+            _biases[i] = newBias;
+        }
     }
 }

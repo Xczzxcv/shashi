@@ -96,7 +96,7 @@ internal class GameStateManager
         
         var currMoveSide = _game.CurrMoveSide;
 
-        var whitePossibleMoves = _rulesManager.GetPossibleSideMoves(Side.White, board);
+        var whitePossibleMoves = _rulesManager.GetPossibleSideMoves(Side.White, board, _game.GetPoolsProvider());
         var whitePossibleMovesCount = whitePossibleMoves.Count;
         whitePossibleMoves.ReturnToPool();
 
@@ -106,7 +106,7 @@ internal class GameStateManager
             return GameState.BlackWon;
         }
 
-        var blackPossibleMoves = _rulesManager.GetPossibleSideMoves(Side.Black, board);
+        var blackPossibleMoves = _rulesManager.GetPossibleSideMoves(Side.Black, board, _game.GetPoolsProvider());
         var blackPossibleMovesCount = blackPossibleMoves.Count;
         blackPossibleMoves.ReturnToPool();
 
@@ -181,7 +181,7 @@ internal class GameStateManager
     private bool CheckThreeKingsVsOneKingPieces(in Board currBoard, 
         Side threeKingsSide, Side oneKingSide)
     {
-        var whitePieces = currBoard.GetPieces(threeKingsSide);
+        var whitePieces = currBoard.GetPieces(threeKingsSide, _game.GetPoolsProvider());
         if (whitePieces.Count < 3)
         {
             whitePieces.ReturnToPool();
@@ -200,7 +200,7 @@ internal class GameStateManager
             return false;
         }
 
-        var blackPieces = currBoard.GetPieces(oneKingSide);
+        var blackPieces = currBoard.GetPieces(oneKingSide, _game.GetPoolsProvider());
         if (blackPieces.Count != 1)
         {
             blackPieces.ReturnToPool();
@@ -250,7 +250,7 @@ internal class GameStateManager
         return result;
     }
 
-    private static bool CheckBothHaveKingsAndPowerEqualityNotChangedPieces(Board currBoard, 
+    private bool CheckBothHaveKingsAndPowerEqualityNotChangedPieces(Board currBoard, 
         out int piecesAmount)
     {
         piecesAmount = default;
@@ -268,11 +268,20 @@ internal class GameStateManager
         return true;
     }
 
-    private static bool CheckSideHaveKing(Side side, in Board currBoard, out int piecesAmount)
+    private bool CheckSideHaveKing(Side side, in Board currBoard, out int piecesAmount)
     {
-        var sidePieces = currBoard.GetPieces(side);
+        var sidePieces = currBoard.GetPieces(side, _game.GetPoolsProvider());
         piecesAmount = sidePieces.Count;
-        var sideHaveKing = sidePieces.Any(piece => piece.Rank == PieceRank.King);
+        var sideHaveKing = false;
+        foreach (var piece in sidePieces)
+        {
+            if (piece.Rank == PieceRank.King)
+            {
+                sideHaveKing = true;
+                break;
+            }
+        }
+
         sidePieces.ReturnToPool();
 
         return sideHaveKing;
@@ -301,7 +310,7 @@ internal class GameStateManager
     private bool CheckThreePiecesVsOneKingOnBigLinePieces(in Board currBoard, Side threePiecesSide,
         Side oneKingOnBigLineSide)
     {
-        var threePiecesSidePieces = currBoard.GetPieces(threePiecesSide);
+        var threePiecesSidePieces = currBoard.GetPieces(threePiecesSide, _game.GetPoolsProvider());
         var threePiecesCountCheck = threePiecesSidePieces.Count == 3;
         threePiecesSidePieces.ReturnToPool();
         if (!threePiecesCountCheck)
@@ -309,7 +318,7 @@ internal class GameStateManager
             return false;
         }
 
-        var oneKingSidePieces = currBoard.GetPieces(oneKingOnBigLineSide);
+        var oneKingSidePieces = currBoard.GetPieces(oneKingOnBigLineSide, _game.GetPoolsProvider());
         var oneKingSidePiecesCountCheck = oneKingSidePieces.Count == 1;
         if (!oneKingSidePiecesCountCheck)
         {

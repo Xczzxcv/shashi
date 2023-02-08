@@ -10,6 +10,8 @@ public class CheckersAi : IDisposable
     {
         [JsonInclude, JsonPropertyName("use_precalculated_data")]
         public bool UsePreCalculatedData;
+        [JsonInclude, JsonPropertyName("cache_board_rating")]
+        public bool CacheBoardRating;
         [JsonInclude, JsonPropertyName("max_depth")]
         public int MaxDepth;
         [JsonInclude, JsonPropertyName("default_board_pos_rater")]
@@ -25,7 +27,8 @@ public class CheckersAi : IDisposable
         public float Rating;
     }
 
-    private static readonly Dictionary<Board, RatedBoardState> RatedBoardStatesCached = new();
+    private readonly SideRatedBoardsStates _whiteRatedBoardStatesCached = new();
+    private readonly SideRatedBoardsStates _blackRatedBoardStatesCached = new();
 
     private Config _config;
     private IBoardPositionRater? _boardPositionRater;
@@ -35,7 +38,6 @@ public class CheckersAi : IDisposable
         _config = config;
         _boardPositionRater = boardPositionRater 
                               ?? new DefaultBoardPositionRater(_config.DefaultBoardPositionRater);
-        DefaultLogger.Log($"Init: depth={_config.MaxDepth}");
         InitPositionsCache();
     }
 
@@ -43,14 +45,9 @@ public class CheckersAi : IDisposable
     {
         if (_config.UsePreCalculatedData)
         {
-            SerializationManager.LoadCachedRatingBoardsData(RatedBoardStatesCached);
+            SerializationManager.LoadCachedRatingBoardsData(_whiteRatedBoardStatesCached, 
+                _blackRatedBoardStatesCached);
         }
-
-        const int empiricPower = 8;
-        const int maxCapacity = 100_000_000;
-        var empiricNeededCapacity = (int) Math.Pow(_config.MaxDepth, empiricPower);
-        var neededCapacity = Math.Min(maxCapacity, empiricNeededCapacity);
-        RatedBoardStatesCached.EnsureCapacity(RatedBoardStatesCached.Count + neededCapacity);
     }
 
     public MoveInfo ChooseMove(Game game, Side side)
@@ -75,7 +72,6 @@ public class CheckersAi : IDisposable
         var bestMoveRating = SetupBestMoveRating(side);
         var updateBestMoveScoreFunc = SetupUpdateBestMoveScoreFunc(side);
 
-        var oldBoard = game.GetBoard();
         var alpha = float.NegativeInfinity;
         var beta = float.PositiveInfinity;
         const int depth = 0;
@@ -108,7 +104,7 @@ public class CheckersAi : IDisposable
 
     private float MinMax(Game game, Side side, float alpha, float beta, int depth)
     {
-        if (TryUseCachedResult(game, depth, out var rating))
+        if (TryUseCachedResult(game, side, depth, out var rating))
         {
             return rating;
         }
@@ -116,10 +112,11 @@ public class CheckersAi : IDisposable
         var currBoard = game.GetBoard();
         if (!game.IsGameBeingPlayed)
         {
+            var depthCft = Math.Max(1, _config.MaxDepth - depth);
             return game.State switch
             {
-                GameState.WhiteWon => _config.DefaultBoardPositionRater.LossRatingAmount,
-                GameState.BlackWon => -_config.DefaultBoardPositionRater.LossRatingAmount,
+                GameState.WhiteWon => _config.DefaultBoardPositionRater.LossRatingAmount * depthCft,
+                GameState.BlackWon => -_config.DefaultBoardPositionRater.LossRatingAmount * depthCft,
                 GameState.Draw => 0,
                 _ => throw ThrowHelper.WrongSideException(side),
             };
@@ -132,7 +129,7 @@ public class CheckersAi : IDisposable
             if (noTakes)
             {
                 possibleMoves.ReturnToPool();
-                return _boardPositionRater.RatePosition(currBoard, side);
+                return _boardPositionRater.RatePosition(currBoard, side, game.GetPoolsProvider());
             }
         }
 
@@ -142,11 +139,12 @@ public class CheckersAi : IDisposable
         for (var moveInd = 0; moveInd < possibleMoves.Count; moveInd++)
         {
             var possibleMove = possibleMoves[moveInd];
-            EvaluateMove(game, side, ref alpha, ref beta, ref bestMoveRating, depth, possibleMove, updateBestMoveScoreFunc);
+            EvaluateMove(game, side, ref alpha, ref beta, ref bestMoveRating, depth, 
+                possibleMove, updateBestMoveScoreFunc);
 
             if (TryPrune(alpha, beta))
             {
-                PrunedMovesCount += possibleMoves.Count - (moveInd + 1);
+                PrunedMovesCount += (ulong) (possibleMoves.Count - (moveInd + 1));
                 break;
             }
 
@@ -197,7 +195,7 @@ public class CheckersAi : IDisposable
     {
         game.MakeMove(possibleMove);
         var moveRating = MinMax(game, Game.GetOppositeSide(side), alpha, beta, depth + 1);
-        CacheResult(game, depth, moveRating);
+        CacheResult(game, side, depth, moveRating);
         game.TakeBackLastMove();
 
         return updateBestMoveScoreFunc(moveRating, ref bestMoveRating, ref alpha, ref beta);
@@ -206,8 +204,8 @@ public class CheckersAi : IDisposable
     private delegate bool UpdateBestMoveScoreFunc(float currentMoveRating, ref float bestMoveRating, ref float alpha, ref float beta);
     private readonly UpdateBestMoveScoreFunc _updateBestWhitesScoreFunc = UpdateBestWhitesScore;
     private readonly UpdateBestMoveScoreFunc _updateBestBlacksScoreFunc = UpdateBestBlacksScore;
-    public static int NotPrunedMovesCount;
-    public static int PrunedMovesCount;
+    public static ulong NotPrunedMovesCount;
+    public static ulong PrunedMovesCount;
 
     private static bool UpdateBestWhitesScore(float currentMoveRating, ref float bestMoveRating, ref float alpha, ref float beta)
     {
@@ -241,13 +239,14 @@ public class CheckersAi : IDisposable
         return true;
     }
 
-    private bool TryUseCachedResult(Game game, int depth, out float rating)
+    private bool TryUseCachedResult(Game game, Side side, int depth, out float rating)
     {
         rating = default;
 
         var minAnalyzedDepth = _config.MaxDepth - depth;
         var board = game.GetBoard();
-        if (!RatedBoardStatesCached.TryGetValue(board, out var ratedBoardState))
+        var sideBoardStates = GetSideRatedBoardStates(side);
+        if (!sideBoardStates.TryGetValue(board, out var ratedBoardState))
         {
             return false;
         }
@@ -261,13 +260,29 @@ public class CheckersAi : IDisposable
         return true;
     }
 
-    private void CacheResult(Game game, int depth, float moveRating)
+    private SideRatedBoardsStates GetSideRatedBoardStates(Side side)
     {
+        return side switch
+        {
+            Side.White => _whiteRatedBoardStatesCached,
+            Side.Black => _blackRatedBoardStatesCached,
+            _ => throw ThrowHelper.WrongSideException(side),
+        };
+    }
+
+    private void CacheResult(Game game, Side side, int depth, float moveRating)
+    {
+        if (!_config.CacheBoardRating)
+        {
+            return;
+        }
+        
         var analyzedDepth = _config.MaxDepth - depth;
         var board = game.GetBoard();
-        if (!RatedBoardStatesCached.TryGetValue(board, out var ratedBoardState))
+        var sideBoardStates = GetSideRatedBoardStates(side);
+        if (!sideBoardStates.TryGetValue(board, out var ratedBoardState))
         {
-            UpdateCachedBoardRating(board, analyzedDepth, moveRating);
+            UpdateCachedBoardRating(sideBoardStates, board, analyzedDepth, moveRating);
             return;
         }
 
@@ -276,60 +291,26 @@ public class CheckersAi : IDisposable
             return;
         }
 
-        UpdateCachedBoardRating(board, analyzedDepth, moveRating);
+        UpdateCachedBoardRating(sideBoardStates, board, analyzedDepth, moveRating);
     }
 
-    private static void UpdateCachedBoardRating(Board board, int analyzedDepth, float moveRating)
+    private static void UpdateCachedBoardRating(SideRatedBoardsStates ratedBoardStates,
+        Board board, int analyzedDepth, float moveRating)
     {
-        CheckersAi.RatedBoardState ratedBoardState;
+        RatedBoardState ratedBoardState;
         ratedBoardState.Rating = moveRating;
         ratedBoardState.AnalyzedDepth = analyzedDepth;
-        RatedBoardStatesCached[board] = ratedBoardState;
-    }
-
-    private static int GetMaxIndex(in Span<float> possibleMoveRatings)
-    {
-        var maxMoveRating = float.NegativeInfinity;
-        var maxMoveRatingInd = -1;
-        for (var moveInd = 0; moveInd < possibleMoveRatings.Length; moveInd++)
-        {
-            var moveRating = possibleMoveRatings[moveInd];
-            if (moveRating > maxMoveRating)
-            {
-                maxMoveRating = moveRating;
-                maxMoveRatingInd = moveInd;
-            }
-        }
-
-        return maxMoveRatingInd;
-    }
-
-    private static int GetMinIndex(in Span<float> possibleMoveRatings)
-    {
-        var minMoveRating = float.PositiveInfinity;
-        var minMoveRatingInd = -1;
-        for (var moveInd = 0; moveInd < possibleMoveRatings.Length; moveInd++)
-        {
-            var moveRating = possibleMoveRatings[moveInd];
-            if (moveRating < minMoveRating)
-            {
-                minMoveRating = moveRating;
-                minMoveRatingInd = moveInd;
-            }
-        }
-
-        return minMoveRatingInd;
-    }
-
-    public float RatePosition(Board board, Side side)
-    {
-        return _boardPositionRater.RatePosition(board, side);
+        ratedBoardStates[board] = ratedBoardState;
     }
 
     public void Dispose()
     {
-        SerializationManager.SaveCachedRatedBoardsData(RatedBoardStatesCached);
+        if (_config.UsePreCalculatedData)
+        {
+            SerializationManager.SaveCachedRatedBoardsData(_whiteRatedBoardStatesCached, _blackRatedBoardStatesCached);
+        }
 
-        RatedBoardStatesCached.Clear();
+        _whiteRatedBoardStatesCached.Clear();
+        _blackRatedBoardStatesCached.Clear();
     }
 }

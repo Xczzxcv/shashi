@@ -4,10 +4,17 @@ namespace Core;
 
 internal class RulesManager
 {
-    public MovesCollection GetPossibleSideMoves(Side side, Board board)
+    private readonly PoolsProvider _poolsProvider;
+
+    public RulesManager(PoolsProvider poolsProvider)
     {
-        var possibleMoves = PoolsProvider.MovesCollectionPool.Get();
-        var pieces = board.GetPieces(side);
+        _poolsProvider = poolsProvider;
+    }
+
+    public MovesCollection GetPossibleSideMoves(Side side, Board board, PoolsProvider poolsProvider)
+    {
+        var possibleMoves = _poolsProvider.MovesCollectionPool.Get();
+        var pieces = board.GetPieces(side, poolsProvider);
         if (!TryAddPossibleTakes(pieces, possibleMoves, board))
         {
             AddPossibleMoves(board, pieces, possibleMoves);
@@ -99,7 +106,7 @@ internal class RulesManager
         Vec2Int attackDirection, Board board)
     {
         const int checkerOvertakeRange = 1;
-        var takeDestPositions = PoolsProvider.VectorsCollectionPool.Get();
+        var takeDestPositions = _poolsProvider.VectorsCollectionPool.Get();
         for (int overtakeRange = 1; overtakeRange <= checkerOvertakeRange; overtakeRange++)
         {
             var takeDestPos = enemyPiece.Position + attackDirection * overtakeRange;
@@ -124,8 +131,8 @@ internal class RulesManager
     {
         const int kingOvertakeRange = Constants.BOARD_SIZE - 1;
         var hasAnyContinuationTakes = false;
-        var takeDestPositionsWithContinuation = PoolsProvider.VectorsCollectionPool.Get();
-        var takeDestPositionsWithoutContinuation = PoolsProvider.VectorsCollectionPool.Get();
+        var takeDestPositionsWithContinuation = _poolsProvider.VectorsCollectionPool.Get();
+        var takeDestPositionsWithoutContinuation = _poolsProvider.VectorsCollectionPool.Get();
         for (int overtakeRange = 1; overtakeRange <= kingOvertakeRange; overtakeRange++)
         {
             var takeDestPos = enemyPiece.Position + attackDirection * overtakeRange;
@@ -143,7 +150,7 @@ internal class RulesManager
             PerformSingleTake(piece, enemyPiece, takeDestPos, ref board);
 
             var attackDirections = GetAttackDirections(attackDirection);
-            var possibleMoves = PoolsProvider.MovesCollectionPool.Get();
+            var possibleMoves = _poolsProvider.MovesCollectionPool.Get();
             AddPossiblePieceTakes(possibleMoves, pieceAfterTake, board, false, attackDirections);
             attackDirections.ReturnToPool();
             var possibleMovesCount = possibleMoves.Count;
@@ -172,12 +179,12 @@ internal class RulesManager
         return takeDestPositionsWithContinuation;
     }
 
-    private static Vectors2IntCollection GetAttackDirections(Vec2Int attackDirection)
+    private Vectors2IntCollection GetAttackDirections(Vec2Int attackDirection)
     {
         var oneDir = new Vec2Int(attackDirection.X * -1, attackDirection.Y);
         var otherDir = new Vec2Int(attackDirection.X, attackDirection.Y * -1);
 
-        var attackDirections = PoolsProvider.VectorsCollectionPool.Get();
+        var attackDirections = _poolsProvider.VectorsCollectionPool.Get();
         attackDirections.Add(oneDir);
         attackDirections.Add(otherDir);
         return attackDirections;
@@ -195,7 +202,7 @@ internal class RulesManager
 
         attackDirections ??= _defaultAttackDirections;
 
-        var detectedEnemyPieces = PoolsProvider.PiecesCollectionPool.Get();
+        var detectedEnemyPieces = _poolsProvider.PiecesCollectionPool.Get();
         foreach (var attackDirection in attackDirections)
         {
             for (int detectRange = 1; detectRange <= maxDetectRange; detectRange++)
@@ -252,7 +259,6 @@ internal class RulesManager
             _takesDone.Add(take);
             takesCount += AddPossiblePieceTakes(possibleMoves, pieceAfterTake, board, 
                 true);
-            Debug.Assert(_takesDone.IndexOf(take) == _takesDone.LastIndex());
             _takesDone.RemoveAt(_takesDone.LastIndex());
             RevertSingleTake(piece, pieceAfterTake, checkedEnemyPiece, ref board);
         }

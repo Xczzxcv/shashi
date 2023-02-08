@@ -1,6 +1,6 @@
 ﻿namespace Core;
 
-public static class ThrowHelper
+internal static class ThrowHelper
 {
     public static Exception WrongMoveTypeException(in MoveInfo moveInfo)
     {

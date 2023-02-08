@@ -40,10 +40,10 @@ public partial struct Board : IEquatable<Board>
         return customState;
     }
 
-    public readonly PiecesCollection GetPieces(Side side)
+    public readonly PiecesCollection GetPieces(Side side, PoolsProvider poolsProvider)
     {
         var piecesSrc = GetSideStateCopy(side);
-        return piecesSrc.GetPieces();
+        return piecesSrc.GetPieces(poolsProvider);
     }
 
     private readonly SideState GetSideStateCopy(Side side)

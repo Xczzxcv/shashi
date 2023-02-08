@@ -32,6 +32,11 @@ public class ConsolePlayer : Player
         return Task.FromResult(chosenMove);
     }
 
+    public override Player Clone()
+    {
+        return new ConsolePlayer();
+    }
+
     private static bool IsValidMoveIndex(int moveInd, MovesCollection possibleMoves)
     {
         return 0 <= moveInd && moveInd < possibleMoves.Count;

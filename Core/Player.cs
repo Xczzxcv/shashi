@@ -2,20 +2,12 @@
 
 public abstract class Player : IDisposable
 {
-    protected enum FeedbackType
-    {
-        Won,
-        Lost,
-        DrawHappened
-    }
-
-    public virtual void Init()
+    public virtual void Init(CheckersAi.Config aiConfig)
     { }
 
     public abstract Task<MoveInfo> ChooseMove(Game game, Side side);
 
-    public virtual void PostGameProcess(Game game, Side side)
-    { }
+    public abstract Player Clone();
 
     public virtual void Dispose()
     { }

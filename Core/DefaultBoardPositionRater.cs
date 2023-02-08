@@ -29,16 +29,16 @@ public class DefaultBoardPositionRater : IBoardPositionRater
         _config = config;
     }
 
-    public float RatePosition(Board board, Side side)
+    public float RatePosition(in Board board, Side side, PoolsProvider poolsProvider)
     {
-        var whitePieces = board.GetPieces(Side.White);
+        var whitePieces = board.GetPieces(Side.White, poolsProvider);
         if (whitePieces.Count <= 0)
         {
             whitePieces.ReturnToPool();
             return -_config.LossRatingAmount;
         }
 
-        var blackPieces = board.GetPieces(Side.Black);
+        var blackPieces = board.GetPieces(Side.Black, poolsProvider);
         if (blackPieces.Count <= 0)
         {
             whitePieces.ReturnToPool();
@@ -49,8 +49,8 @@ public class DefaultBoardPositionRater : IBoardPositionRater
         var whitePieceRating = RatePiecesValue(whitePieces);
         var blackPieceRating = RatePiecesValue(blackPieces);
 
-        var max = Math.Max((float) whitePieceRating, (float) blackPieceRating);
-        var min = Math.Min((float) whitePieceRating, (float) blackPieceRating);
+        var max = Math.Max(whitePieceRating, blackPieceRating);
+        var min = Math.Min(whitePieceRating, blackPieceRating);
         var cft = MathF.Pow(max, 2) / MathF.Pow(min, 2);
         
         whitePieces.ReturnToPool();
@@ -111,9 +111,4 @@ public class DefaultBoardPositionRater : IBoardPositionRater
             piecePositionRating += _config.NearPromotionBuff;
         }
     }
-}
-
-public interface IBoardPositionRater
-{
-    public float RatePosition(Board board, Side side);
 }
