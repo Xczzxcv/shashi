@@ -2,6 +2,12 @@
 
 public partial class RateBoardNeuralNet
 {
+    public void InitWithCustomConfig(string configFilename)
+    {
+        var config = LoadConfig(configFilename);
+        InitInternal(config);
+    }
+
     public static void MakeNewRandomConfig()
     {
         var rateBoardNet = new RateBoardNeuralNet();

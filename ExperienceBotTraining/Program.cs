@@ -11,15 +11,19 @@ public static class Program
         Task.Run(() =>
         {
             Console.ReadLine();
-            Console.WriteLine("Simulation will be stopped as soon as current game will end");
+            Console.WriteLine("Simulation will be stopped as soon as current generation will be processed");
             cts.Cancel();
         });
         var experiencedBotTrainingManager = new ExperiencedBotTrainingManager();
         experiencedBotTrainingManager.Init();
 
-        await experiencedBotTrainingManager.TrainBot(200, cts.Token);
+        const int generationsAmount = 300;
+        const double trainingSpeed = 0.5;
+        await experiencedBotTrainingManager.TrainBot(generationsAmount, trainingSpeed, cts.Token);
         
         experiencedBotTrainingManager.Dispose();
         GameHelper.LogPostRunStats();
+        Console.WriteLine("Training ended. Press enter to finish program");
+        Console.ReadLine();
     }
 }

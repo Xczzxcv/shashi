@@ -1,4 +1,5 @@
 ﻿using System.Diagnostics;
+using System.Globalization;
 using System.Text.Json.Serialization;
 
 namespace Core;
@@ -10,12 +11,8 @@ public class CheckersAi : IDisposable
     {
         [JsonInclude, JsonPropertyName("use_precalculated_data")]
         public bool UsePreCalculatedData;
-        [JsonInclude, JsonPropertyName("cache_board_rating")]
-        public bool CacheBoardRating;
         [JsonInclude, JsonPropertyName("max_depth")]
         public int MaxDepth;
-        [JsonInclude, JsonPropertyName("default_board_pos_rater")]
-        public DefaultBoardPositionRater.Config DefaultBoardPositionRater;
     }
 
     [Serializable]
@@ -31,13 +28,16 @@ public class CheckersAi : IDisposable
     private readonly SideRatedBoardsStates _blackRatedBoardStatesCached = new();
 
     private Config _config;
+    private DefaultBoardPositionRater.Config _defaultBoardRaterConfig;
     private IBoardPositionRater? _boardPositionRater;
 
-    public void Init(Config config, IBoardPositionRater? boardPositionRater = null)
+    public void Init(Config config, DefaultBoardPositionRater.Config defaultBoardRaterConfig,
+        IBoardPositionRater? boardPositionRater = null)
     {
         _config = config;
+        _defaultBoardRaterConfig = defaultBoardRaterConfig;
         _boardPositionRater = boardPositionRater 
-                              ?? new DefaultBoardPositionRater(_config.DefaultBoardPositionRater);
+                              ?? new DefaultBoardPositionRater(_defaultBoardRaterConfig);
         InitPositionsCache();
     }
 
@@ -88,7 +88,11 @@ public class CheckersAi : IDisposable
                 chosenMove = possibleMove;
             }
 
-            game.Log($"{moveInd}) {possibleMove} — {oldBestMoveRating} —> {bestMoveRating}");
+            var moveRatingInfoStr = oldBestMoveRating != bestMoveRating
+                ? $"{oldBestMoveRating} —> {bestMoveRating}"
+                : bestMoveRating.ToString();
+
+            game.Log($"{moveInd}) {possibleMove} — {moveRatingInfoStr}");
             if (TryPrune(alpha, beta))
             {
                 game.Log("There is prune can be done");
@@ -115,8 +119,8 @@ public class CheckersAi : IDisposable
             var depthCft = Math.Max(1, _config.MaxDepth - depth);
             return game.State switch
             {
-                GameState.WhiteWon => _config.DefaultBoardPositionRater.LossRatingAmount * depthCft,
-                GameState.BlackWon => -_config.DefaultBoardPositionRater.LossRatingAmount * depthCft,
+                GameState.WhiteWon => _defaultBoardRaterConfig.LossRatingAmount * depthCft,
+                GameState.BlackWon => -_defaultBoardRaterConfig.LossRatingAmount * depthCft,
                 GameState.Draw => 0,
                 _ => throw ThrowHelper.WrongSideException(side),
             };
@@ -272,11 +276,6 @@ public class CheckersAi : IDisposable
 
     private void CacheResult(Game game, Side side, int depth, float moveRating)
     {
-        if (!_config.CacheBoardRating)
-        {
-            return;
-        }
-        
         var analyzedDepth = _config.MaxDepth - depth;
         var board = game.GetBoard();
         var sideBoardStates = GetSideRatedBoardStates(side);

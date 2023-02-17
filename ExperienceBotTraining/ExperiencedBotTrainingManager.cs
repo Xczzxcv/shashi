@@ -11,9 +11,10 @@ public class ExperiencedBotTrainingManager : IDisposable
     private const int ParentItself = 1;
     public const int GENERATION_POPULATION_AMOUNT = ParentsAmount * (ParentOffspringsAmount + ParentItself);
 
-    private RateBoardNeuralNet _currentNeuralNet;
     private readonly Random _rand;
     private readonly TournamentManager _tournamentManager;
+
+    private RateBoardNeuralNet _currentNeuralNet;
 
     public ExperiencedBotTrainingManager()
     {
@@ -27,7 +28,7 @@ public class ExperiencedBotTrainingManager : IDisposable
         _currentNeuralNet.Init();
     }
 
-    public async Task TrainBot(int generationsAmount, CancellationToken cancellationToken = default)
+    public async Task TrainBot(int generationsAmount, double trainingSpeed = 1d, CancellationToken cancellationToken = default)
     {
         Debug.Assert(generationsAmount > 0);
         DefaultLogger.Log($"Will train exp bot for {generationsAmount} generations");
@@ -35,12 +36,16 @@ public class ExperiencedBotTrainingManager : IDisposable
         var currGeneration = new List<RateBoardNeuralNet>(GENERATION_POPULATION_AMOUNT);
         var bestNetVariants = MakeInitialOffsprings(_currentNeuralNet, 
             ParentsAmount);
+        var fitnessHistory = new List<double>();
         for (int i = 0; i < generationsAmount; i++)
         {
             MakeNewGeneration(bestNetVariants, currGeneration);
             DefaultLogger.Log($"{i + 1}-th generation was made");
-            bestNetVariants = await GetBestVariants(currGeneration, ParentsAmount);
-            DefaultLogger.Log($"{i + 1} generations passed");
+            bestNetVariants = await GetBestVariants(currGeneration, ParentsAmount, trainingSpeed);
+
+            var currentFitness = GetNetFitness(bestNetVariants[0]);
+            fitnessHistory.Add(currentFitness);
+            DefaultLogger.Log($"{i + 1} generations passed. Current fitness: {currentFitness}");
 
             if (cancellationToken.IsCancellationRequested)
             {
@@ -54,10 +59,12 @@ public class ExperiencedBotTrainingManager : IDisposable
 
         async Task EndTraining()
         {
-            bestNetVariants = await GetBestVariants(bestNetVariants, 1);
+            bestNetVariants = await GetBestVariants(bestNetVariants, 1, trainingSpeed);
             var bestNet = bestNetVariants[0];
             UpdateCurrentNeuralNet(bestNet);
             DefaultLogger.Log("Training is ended");
+            var fitnessHistoryStr = string.Join('\n', fitnessHistory);
+            DefaultLogger.Log($"Fitness history:\n{fitnessHistoryStr}");
         }
     }
 
@@ -90,9 +97,33 @@ public class ExperiencedBotTrainingManager : IDisposable
     }
 
     private async Task<List<RateBoardNeuralNet>> GetBestVariants(List<RateBoardNeuralNet> generation, 
-        int bestVariantsAmount)
+        int bestVariantsAmount, double playingSpeed)
     {
-        return await _tournamentManager.PlayTournamentAndGetBests(generation, bestVariantsAmount);
+        return await _tournamentManager.PlayTournamentAndGetBests(generation, bestVariantsAmount, playingSpeed);
+    }
+
+    private double GetNetFitness(RateBoardNeuralNet rateBoardNet)
+    {
+        var playerToRate = new ExperiencedBotPlayer(rateBoardNet);
+        var enemyPlayer = new BotPlayer();
+
+        const int gamesAmount = 3;
+        var totalScore = 0d;
+        for (int i = 0; i < gamesAmount; i++)
+        {
+            var currentDepth = 2 * (i + 1);
+
+            var gameConfig = _tournamentManager.GetModifiedEnemyAiDepthConfig(currentDepth);
+            var (gameScore, _) = _tournamentManager.GetGameResults(playerToRate,
+                enemyPlayer, gameConfig);
+
+            var scoreCft = gameScore >= 0
+                ? currentDepth / (double) TournamentManager.TargetAiDepth
+                : TournamentManager.TargetAiDepth / (double) currentDepth;
+            totalScore += gameScore * scoreCft;
+        }
+
+        return totalScore;
     }
 
     private void UpdateCurrentNeuralNet(RateBoardNeuralNet rateBoardNeuralNet)

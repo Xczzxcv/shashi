@@ -21,13 +21,12 @@ public partial class RateBoardNeuralNet : IBoardPositionRater
 
     public const char LAYERS_NAME_SEPARATOR = '_';
     private const string FolderName = "NeuralNet";
-    private const string ConfigFileName = "Config";
+    private const string DefaultConfigFileName = "Config";
     private const string InputLayerName = "input";
     private const string Layer1Name = "layer1";
     private const string Layer2Name = "layer2";
     private const string Layer3Name = "layer3";
     private const string OutputName = "output";
-    private static readonly string ConfigFilepath = SerializationManager.GetFilePath($"{FolderName}/{ConfigFileName}");
     public const double INITIAL_VALUE_SPREAD = 0.2;
     public const double OFFSPRING_VALUE_VARY_AMOUNT = 0.05;
 
@@ -158,7 +157,13 @@ public partial class RateBoardNeuralNet : IBoardPositionRater
 
     private static void SaveConfig(Config config)
     {
-        SerializationManager.SaveSomeData(ConfigFilepath, config);
+        SerializationManager.SaveSomeData(GetConfigFilepath(), config);
+    }
+
+    private static string GetConfigFilepath(string? configFilename = null)
+    {
+        configFilename ??= DefaultConfigFileName;
+        return SerializationManager.GetFilePath($"{FolderName}/{configFilename}");
     }
 
     private Config GetConfig()
@@ -185,11 +190,12 @@ public partial class RateBoardNeuralNet : IBoardPositionRater
         return resultConfig;
     }
 
-    public static Config LoadConfig()
+    private static Config LoadConfig(string? filename = null)
     {
-        if (!SerializationManager.TryLoadSomeData<Config>(ConfigFilepath, FileMode.Open, out var config))
+        var configFilepath = GetConfigFilepath(filename); 
+        if (!SerializationManager.TryLoadSomeData<Config>(configFilepath, FileMode.Open, out var config))
         {
-            throw new FileLoadException($"Can't load config file '{ConfigFilepath}'");
+            throw new FileLoadException($"Can't load config file '{configFilepath}'");
         }
 
         return config;

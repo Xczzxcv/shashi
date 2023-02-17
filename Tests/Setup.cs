@@ -23,12 +23,14 @@ public static class Setup
         
         if (aiDepth.HasValue)
         {
-            loadedConfig.AiConfig.MaxDepth = aiDepth.Value;
+            loadedConfig.WhiteAiConfig.MaxDepth = aiDepth.Value;
+            loadedConfig.BlackAiConfig.MaxDepth = aiDepth.Value;
         }
 
         if (usePreCalculatedData.HasValue)
         {
-            loadedConfig.AiConfig.UsePreCalculatedData = usePreCalculatedData.Value;
+            loadedConfig.WhiteAiConfig.UsePreCalculatedData = usePreCalculatedData.Value;
+            loadedConfig.BlackAiConfig.UsePreCalculatedData = usePreCalculatedData.Value;
         }
         
         var game = Create.Game();

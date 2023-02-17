@@ -1,50 +1,53 @@
 {
 	"board": {
 		"use_custom": false,
-		"current_move_side": "white",
+		"current_move_side": "black",
 		"board_state": [
-			"8|█░█W█░█░",
-			"7|░█░█░█░█",
+			"8|█*█*█░█*",
+			"7|*█░█*█*█",
 			"6|█░█░█░█░",
 			"5|░█░█░█░█",
-			"4|█░█*█░█0",
-			"3|*█░█░█0█",
-			"2|█░█░█░█░",
-			"1|░█0█0█░█",
+			"4|█*█░█░█░",
+			"3|0█░█░█░█",
+			"2|█░█░█0█*",
+			"1|0█░█0█0█",
 			"  ABCDEFGH",
 		],
 		"white_side": 0,
 		"black_side": 0
 	},
-	"ai": {
-		"default_board_pos_rater":{
-			"checker_square_coefficients": [
-				0, 0.3, 0, -0.1,
-				-0.07, 0, 0, 0,
-				0.1, 0.1, 0, -0.07,
-				0.05, 0.3, 0.1, 0.1,
-				0.1, 0.1, 0.3, 0.05,
-				-0.07, 0, 0.1, 0.1,
-				0, 0, 0, -0.07,
-				-0.1, 0, 0.3, 0,
-			],
-			"kings_square_coefficients": [
-				0, 0, 0, 0.1,
-				0, 0, 0, 0.1,
-				0, 0, 0.1, 0,
-				0, 0, 0.1, 0,
-				0, 0.1, 0, 0,
-				0, 0.1, 0, 0,
-				0.1, 0, 0, 0,
-				0.1, 0, 0, 0,
-			],
-			"loss_rating_amount": 100000,
-			"checker_cost": 1,
-			"king_cost": 2.5,
-			"near_promotion_buff": 0.2,
-		},
+	"white_ai": {
 		"use_precalculated_data": false,
-		"cache_board_rating": true,
 		"max_depth": 4
-	}
+	},
+	"black_ai": {
+		"use_precalculated_data": false,
+		"max_depth": 6
+	},
+	"default_board_pos_rater":{
+		"checker_square_coefficients": [
+			0, 0.3, 0, -0.1,
+			-0.07, 0, 0, 0,
+			0.1, 0.1, 0, -0.07,
+			0.05, 0.3, 0.1, 0.1,
+			0.1, 0.1, 0.3, 0.05,
+			-0.07, 0, 0.1, 0.1,
+			0, 0, 0, -0.07,
+			-0.1, 0, 0.3, 0,
+		],
+		"kings_square_coefficients": [
+			0, 0, 0, 0.1,
+			0, 0, 0, 0.1,
+			0, 0, 0.1, 0,
+			0, 0, 0.1, 0,
+			0, 0.1, 0, 0,
+			0, 0.1, 0, 0,
+			0.1, 0, 0, 0,
+			0.1, 0, 0, 0,
+		],
+		"loss_rating_amount": 100000,
+		"checker_cost": 1,
+		"king_cost": 2.5,
+		"near_promotion_buff": 0.2,
+	},
 }

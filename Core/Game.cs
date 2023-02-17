@@ -10,15 +10,19 @@ public partial class Game : IDisposable
     {
         [JsonInclude, JsonPropertyName("board")]
         public Board.Config BoardConfig;
-        [JsonInclude, JsonPropertyName("ai")]
-        public CheckersAi.Config AiConfig;
+        [JsonInclude, JsonPropertyName("white_ai")]
+        public CheckersAi.Config WhiteAiConfig;
+        [JsonInclude, JsonPropertyName("black_ai")]
+        public CheckersAi.Config BlackAiConfig;
+        [JsonInclude, JsonPropertyName("default_board_pos_rater")]
+        public DefaultBoardPositionRater.Config DefaultBoardPositionRater;
     }
 
     public Side CurrMoveSide { get; private set; }
     public bool IsGameBeingPlayed => _gameStateManager.State == GameState.GameBeingPlayed;
     public GameState State => _gameStateManager.State;
     public int CurrentTurnIndex => _moveIndex / 2;
-    public DefaultBoardPositionRater.Config DefaultBoardPosRaterConfig => _config.AiConfig.DefaultBoardPositionRater;
+    public DefaultBoardPositionRater.Config DefaultBoardPosRaterConfig => _config.DefaultBoardPositionRater;
 
     private readonly RulesManager _rulesManager;
     private readonly LogManager _logManager;
@@ -53,9 +57,10 @@ public partial class Game : IDisposable
         SetupBoard();
         SetupSide();
 
-        Log($"Init: depth={_config.AiConfig.MaxDepth}");
-        _whitesPlayer.Init(_config.AiConfig);
-        _blacksPlayer.Init(_config.AiConfig);
+        Log($"Init: white ai depth={_config.WhiteAiConfig.MaxDepth}, " +
+            $"black ai depth={_config.BlackAiConfig.MaxDepth}");
+        _whitesPlayer.Init(_config, Side.White);
+        _blacksPlayer.Init(_config, Side.Black);
     }
 
     private void SetupConfig(Config? config)

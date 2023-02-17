@@ -11,8 +11,8 @@ public static class Program
         rateBoardNet.Init();
         await GameHelper.SimulateMultipleGames(new GameHelper.GameSimulationArgs
         {
-            WhitesPlayer = new BotPlayer(),
-            BlacksPlayer = new ExperiencedBotPlayer(rateBoardNet),
+            WhitesPlayer = new ExperiencedBotPlayer(rateBoardNet),
+            BlacksPlayer = null,
             Logger = new ConsoleLogger(),
             GamesAmount = 1,
         });

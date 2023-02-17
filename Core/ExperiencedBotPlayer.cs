@@ -13,10 +13,11 @@ public class ExperiencedBotPlayer : Player
         _ai = new CheckersAi();
     }
 
-    public override void Init(CheckersAi.Config aiConfig)
+    public override void Init(Game.Config gameConfig, Side side)
     {
-        base.Init(aiConfig);
-        _ai.Init(aiConfig, _rateBoardNeuralNet);
+        base.Init(gameConfig, side);
+        var aiConfig = GetSideAiConfig(gameConfig, side);
+        _ai.Init(aiConfig, gameConfig.DefaultBoardPositionRater, _rateBoardNeuralNet);
     }
 
     public override async Task<MoveInfo> ChooseMove(Game game, Side side)

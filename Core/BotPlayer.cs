@@ -9,12 +9,13 @@ public class BotPlayer : Player
         _ai = new CheckersAi();
     }
 
-    public override void Init(CheckersAi.Config aiConfig)
+    public override void Init(Game.Config gameConfig, Side side)
     {
-        base.Init(aiConfig);
+        base.Init(gameConfig, side);
+        var aiConfig = GetSideAiConfig(gameConfig, side);
         _ai.Init(
-            aiConfig,
-            new DefaultBoardPositionRater(aiConfig.DefaultBoardPositionRater)
+            aiConfig, gameConfig.DefaultBoardPositionRater,
+            new DefaultBoardPositionRater(gameConfig.DefaultBoardPositionRater)
         );
     }
 
