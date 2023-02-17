@@ -299,8 +299,8 @@ internal class RulesManager
     {
         var maxMoveRange = piece.Rank switch
         {
-            PieceRank.Checker=>1,
-            PieceRank.King=>Constants.BOARD_SIZE - 1,
+            PieceRank.Checker => 1,
+            PieceRank.King => Constants.BOARD_SIZE - 1,
             _ => throw ThrowHelper.WrongPieceRankException(piece)
         };
         foreach (var moveDirection in _moveDirections)
@@ -310,7 +310,7 @@ internal class RulesManager
                 var possibleMoveDestPos = piece.Position + moveDirection * moveRange;
                 if (!CanMoveTo(piece, possibleMoveDestPos, board))
                 {
-                    continue;
+                    break;
                 }
                 
                 var possibleMove = MoveInfo.BuildMove(piece, possibleMoveDestPos);
@@ -319,7 +319,7 @@ internal class RulesManager
         }
     }
 
-    private bool CanMoveTo(Piece piece, Vec2Int boardSquare, Board board)
+    private static bool CanMoveTo(Piece piece, Vec2Int boardSquare, Board board)
     {
         if (!Board.IsValidSquare(boardSquare))
         {
