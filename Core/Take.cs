@@ -15,7 +15,7 @@ public struct Take
         return $"{SrcPos.AsNotation()}{SEP1}{TakenPiecePos.AsNotation()}{SEP2}{DestPos.AsNotation()}";
     }
 
-    public static Take FromChars(ReadOnlySpan<char> chars)
+    public static Take BuildFromChars(ReadOnlySpan<char> chars)
     {
         var sep1Index = chars.IndexOf(SEP1);
         var sep2Index = chars.IndexOf(SEP2);

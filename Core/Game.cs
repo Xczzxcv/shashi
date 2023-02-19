@@ -72,11 +72,11 @@ public partial class Game : IDisposable
     {
         if (!_config.BoardConfig.UseCustomInitBoardState)
         {
-            _board = Board.Initial();
+            _board = Board.BuildInitial();
             return;
         }
 
-        _board = Board.Empty();
+        _board = Board.BuildEmpty();
         var boardConfigImgStrings = _config.BoardConfig.BoardImgStateStrings;
         var hasBoardImgStr = boardConfigImgStrings?.Length > 0;
         if (hasBoardImgStr)

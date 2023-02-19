@@ -12,7 +12,7 @@ public struct Move
         return $"{SrcPos.AsNotation()}{SEP}{DestPos.AsNotation()}";
     }
 
-    public static Move FromChars(ReadOnlySpan<char> chars)
+    public static Move BuildFromChars(ReadOnlySpan<char> chars)
     {
         var sepIndex = chars.IndexOf(SEP);
         var srcPos = chars.ExtractPosFromChars(0, sepIndex);

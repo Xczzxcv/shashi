@@ -31,7 +31,7 @@ public partial struct MoveInfo
         var moveInfo = new MoveInfo
         {
             MoveType = Type.Move,
-            Move = Move.FromChars(moveChars)
+            Move = Move.BuildFromChars(moveChars)
         };
 
         return moveInfo;
@@ -43,7 +43,7 @@ public partial struct MoveInfo
         int nextSepIndex = moveChars.IndexOf(Take.MULTIPLE_SEPARATOR);
         if (nextSepIndex == -1)
         {
-            var take = Take.FromChars(moveChars);
+            var take = Take.BuildFromChars(moveChars);
             takes.Add(take);
         }
         else
@@ -70,7 +70,7 @@ public partial struct MoveInfo
         const int start = 0;
         var length = nextSepIndex - start;
         var takeChars = moveChars.Slice(start, length);
-        var take = Take.FromChars(takeChars);
+        var take = Take.BuildFromChars(takeChars);
         takes.Add(take);
     }
 

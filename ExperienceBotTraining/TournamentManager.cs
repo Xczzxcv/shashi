@@ -115,7 +115,7 @@ public class TournamentManager
 
         PlayAgainstBots(firstPlayer, playerIndex);
 
-        DefaultLogger.Log($"{playerIndex + 1}/{playersGeneration.Count} player ended his games");
+        DefaultLogger.Log($"{playerIndex + 1} / {playersGeneration.Count} player ended his games");
     }
 
     private void PlayAgainstBots(Player firstPlayer, int playerIndex)

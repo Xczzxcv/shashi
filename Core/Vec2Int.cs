@@ -59,7 +59,7 @@ public struct Vec2Int : IEquatable<Vec2Int>
         return $"{horizontalNotation}{verticalNotation}";
     }
 
-    public static Vec2Int FromNotation(ReadOnlySpan<char> chars)
+    public static Vec2Int BuildFromNotation(ReadOnlySpan<char> chars)
     {
         Debug.Assert(chars.Length == 2);
 

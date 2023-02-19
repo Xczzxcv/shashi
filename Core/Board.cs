@@ -7,34 +7,34 @@ public partial struct Board : IEquatable<Board>
     private SideState _white;
     private SideState _black;
 
-    public static Board Initial()
+    public static Board BuildInitial()
     {
         var initState = new Board
         {
-            _white = SideState.InitialWhite(),
-            _black = SideState.InitialBlack(),
+            _white = SideState.BuildWhiteInitial(),
+            _black = SideState.BuildBlackInitial(),
         };
 
         return initState;
     }
 
-    public static Board Empty()
+    public static Board BuildEmpty()
     {
         var initState = new Board
         {
-            _white = SideState.Empty(Side.White),
-            _black = SideState.Empty(Side.Black),
+            _white = SideState.BuildEmpty(Side.White),
+            _black = SideState.BuildEmpty(Side.Black),
         };
 
         return initState;
     }
 
-    public static Board State(ulong whitesState, ulong blacksState)
+    public static Board BuildFromState(ulong whitesState, ulong blacksState)
     {
         var customState = new Board
         {
-            _white = SideState.State(Side.White, whitesState),
-            _black = SideState.State(Side.Black, blacksState),
+            _white = SideState.BuildState(Side.White, whitesState),
+            _black = SideState.BuildState(Side.Black, blacksState),
         };
 
         return customState;

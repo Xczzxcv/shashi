@@ -19,28 +19,28 @@ public struct SideState : IEquatable<SideState>
         _state = sideState;
     }
 
-    public static SideState Empty(Side side)
+    public static SideState BuildEmpty(Side side)
     {
-        var initState = new SideState(side);
-        return initState;
+        var emptyState = new SideState(side);
+        return emptyState;
     }
 
-    public static SideState State(Side side, ulong sideState)
+    public static SideState BuildState(Side side, ulong sideState)
     {
         var initState = new SideState(side, sideState);
         return initState;
     }
 
-    public static SideState InitialWhite()
+    public static SideState BuildWhiteInitial()
     {
-        var initState = Empty(Side.White);
+        var initState = BuildEmpty(Side.White);
         FillSide(INIT_CHECKERS_COUNT, KingsPartShift - INIT_CHECKERS_COUNT, ref initState);
         return initState;
     }
 
-    public static SideState InitialBlack()
+    public static SideState BuildBlackInitial()
     {
-        var initState = Empty(Side.Black);
+        var initState = BuildEmpty(Side.Black);
         FillSide(INIT_CHECKERS_COUNT, CheckersPartShift, ref initState);
         return initState;
     }

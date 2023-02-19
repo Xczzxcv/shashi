@@ -51,7 +51,7 @@ internal static class CharsSpanExt
     public static Vec2Int ExtractPosFromChars(this ReadOnlySpan<char> chars, int startPosIndex, int endPosIndex)
     {
         var posChars = chars.Slice(startPosIndex, endPosIndex - startPosIndex);
-        var pos = Vec2Int.FromNotation(posChars);
+        var pos = Vec2Int.BuildFromNotation(posChars);
 
         return pos;
     }

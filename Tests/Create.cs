@@ -11,6 +11,6 @@ public static class Create
 
     public static Board Board()
     {
-        return Core.Board.Empty();
+        return Core.Board.BuildEmpty();
     }
 }

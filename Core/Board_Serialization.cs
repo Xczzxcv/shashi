@@ -78,9 +78,9 @@ public partial struct Board
         };
     }
     
-    public static Board FromFen(string? boardFenString)
+    public static Board BuildFromFen(string? boardFenString)
     {
-        var resultBoard = Empty();
+        var resultBoard = BuildEmpty();
         if (string.IsNullOrEmpty(boardFenString))
         {
             return resultBoard;

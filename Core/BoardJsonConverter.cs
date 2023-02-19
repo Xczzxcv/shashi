@@ -33,7 +33,7 @@ internal class BoardJsonConverter : JsonConverter<Board>
     private static Board GetBoardFromString(ref Utf8JsonReader reader)
     {
         var boardStr = reader.GetString();
-        var resultBoard = Board.FromFen(boardStr);
+        var resultBoard = Board.BuildFromFen(boardStr);
         return resultBoard;
     }
 }
