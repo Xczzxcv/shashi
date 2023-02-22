@@ -173,4 +173,14 @@ public partial struct Board : IEquatable<Board>
     {
         return pos.Y == Constants.BOARD_SIZE - 1 - pos.X;
     }
+
+    public readonly Board GetFlipped()
+    {
+        var whiteState = _white.GetFlippedState();
+        var blackState = _black.GetFlippedState();
+        return BuildFromState(
+            whiteState.GetInternalState(),
+            blackState.GetInternalState()
+        );
+    }
 }

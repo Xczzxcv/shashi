@@ -1,4 +1,5 @@
 ﻿using System.Diagnostics;
+using System.Runtime.CompilerServices;
 
 namespace Core;
 
@@ -131,7 +132,8 @@ public struct SideState : IEquatable<SideState>
             rowIndex
         );
     }
-
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private readonly bool HasPieceAtBlackSquareIndex(int pieceIndex)
     {
         var mask = 1ul << pieceIndex;
@@ -148,29 +150,28 @@ public struct SideState : IEquatable<SideState>
     {
         var resultPieces = poolsProvider.PiecesCollectionPool.Get();
 
-        for (int i = CheckersPartShift; i < KingsPartShift; i++)
-        {
-            if (!HasPieceAtBlackSquareIndex(i))
-            {
-                continue;
-            }
-
-            var piece = new Piece(Side, PieceRank.Checker, GetPos(i));
-            resultPieces.Add(piece);
-        }
-
-        for (int i = KingsPartShift; i < WholeLength; i++)
-        {
-            if (!HasPieceAtBlackSquareIndex(i))
-            {
-                continue;
-            }
-
-            var piece = new Piece(Side, PieceRank.King, GetPos(i));
-            resultPieces.Add(piece);
-        }
+        TryAddPiecesInRange(CheckersPartShift, KingsPartShift, 
+            PieceRank.Checker, resultPieces);
+        TryAddPiecesInRange(KingsPartShift, WholeLength, 
+            PieceRank.King, resultPieces);
 
         return resultPieces;
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private readonly void TryAddPiecesInRange(int startIndex, int endIndex, PieceRank rank, 
+        PiecesCollection resultPieces)
+    {
+        for (int i = startIndex; i < endIndex; i++)
+        {
+            if (!HasPieceAtBlackSquareIndex(i))
+            {
+                continue;
+            }
+
+            var piece = new Piece(Side, rank: rank, GetPos(i));
+            resultPieces.Add(piece);
+        }
     }
 
     public void SetPiece(in Piece piece)
@@ -213,8 +214,35 @@ public struct SideState : IEquatable<SideState>
         return HashCodeHelper.Get((int) Side, _state);
     }
 
-    public ulong GetSerialization()
+    public readonly ulong GetInternalState()
     {
         return _state;
+    }
+
+    public readonly SideState GetFlippedState()
+    {
+        var flippedState = BuildEmpty(Side);
+
+        SetFlippedPiecesInRange(CheckersPartShift, KingsPartShift,
+            PieceRank.Checker, ref flippedState);
+        SetFlippedPiecesInRange(KingsPartShift, WholeLength,
+            PieceRank.King, ref flippedState);
+
+        return flippedState;
+    }
+
+    private readonly void SetFlippedPiecesInRange(int startIndex, int endIndex, PieceRank rank, 
+        ref SideState flippedState)
+    {
+        for (int i = startIndex; i < endIndex; i++)
+        {
+            if (!HasPieceAtBlackSquareIndex(i))
+            {
+                continue;
+            }
+
+            var flippedIndex = endIndex - (i + 1 - startIndex);
+            flippedState.SetPiece(new Piece(Side, rank, GetPos(flippedIndex)));
+        }
     }
 }

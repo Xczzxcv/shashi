@@ -15,10 +15,13 @@ public class BoardNeuralNetInput : IPoolable
 
     private static double[] GetInputBoard(in Board board, Side side)
     {
+        var boardToWorkOn = side == Side.Black
+            ? board.GetFlipped()
+            : board;
         var resultBoardArray = new double[Constants.BLACK_BOARD_SQUARES_COUNT];
         for (int i = 0; i < Constants.BLACK_BOARD_SQUARES_COUNT; i++)
         {
-            var value = GetSquareValue(board, i, side);
+            var value = GetSquareValue(boardToWorkOn, i, side);
             resultBoardArray[i] = value;
         }
 
