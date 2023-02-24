@@ -33,6 +33,7 @@ public class ExperiencedBotTrainingManager : IDisposable
         Debug.Assert(generationsAmount > 0);
         DefaultLogger.Log($"Will train exp bot for {generationsAmount} generations");
 
+        trainingSpeed = Math.Clamp(trainingSpeed, 0, 1);
         var currGeneration = new List<RateBoardNeuralNet>(GENERATION_POPULATION_AMOUNT);
         var bestNetVariants = MakeInitialOffsprings(_currentNeuralNet, 
             ParentsAmount);

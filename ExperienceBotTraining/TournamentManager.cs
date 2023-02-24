@@ -11,14 +11,17 @@ public class TournamentManager
     private const int DrawAmount = 0;
     private const int BOTS_AMOUNT = 3; // must be odd
 
-    private readonly double[] _tournamentTableCache;
-    private readonly double[] _botTournamentTableCache;
     private readonly Dictionary<int, double> _botRatingSystem = new()
     {
+        {-4, 100},
         {-2, 10},
         {0, 50},
         {2, 100},
+        {4, 1000},
     };
+
+    private readonly double[] _tournamentTableCache;
+    private readonly double[] _botTournamentTableCache;
     private readonly Game.Config _gameConfig;
     private record struct PlayerTournamentResult(int Index, double Result);
 
@@ -130,7 +133,8 @@ public class TournamentManager
             var gameConfig = GetModifiedEnemyAiDepthConfig(currDepth);
             var (firstPlayerResult, _) = GetGameResults(firstPlayer,
                 secondPlayer, gameConfig);
-            _botRatingSystem.TryGetValue(currDepth, out var botSystemRatingCft);
+            var ratingSystemDepth = currDepth - TargetAiDepth;
+            _botRatingSystem.TryGetValue(ratingSystemDepth, out var botSystemRatingCft);
             var currentScore = Math.Max(0, firstPlayerResult) * botSystemRatingCft;
             playerTotalScore += currentScore;
         }
