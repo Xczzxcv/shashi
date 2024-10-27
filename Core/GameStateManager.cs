@@ -95,25 +95,31 @@ internal class GameStateManager
         }
         
         var currMoveSide = _game.CurrMoveSide;
-
-        var whitePossibleMoves = _rulesManager.GetPossibleSideMoves(Side.White, board, _game.GetPoolsProvider());
-        var whitePossibleMovesCount = whitePossibleMoves.Count;
-        whitePossibleMoves.ReturnToPool();
-
-        if (whitePossibleMovesCount == 0
-            && currMoveSide == Side.White)
+        switch (currMoveSide)
         {
-            return GameState.BlackWon;
-        }
+            case Side.White:
+            {
+                var whitePossibleMoves = _rulesManager.GetPossibleSideMoves(Side.White, board, _game.GetPoolsProvider());
+                var whitePossibleMovesCount = whitePossibleMoves.Count;
+                whitePossibleMoves.ReturnToPool();
+                if (whitePossibleMovesCount == 0)
+                {
+                    return GameState.BlackWon;
+                }
 
-        var blackPossibleMoves = _rulesManager.GetPossibleSideMoves(Side.Black, board, _game.GetPoolsProvider());
-        var blackPossibleMovesCount = blackPossibleMoves.Count;
-        blackPossibleMoves.ReturnToPool();
-
-        if (blackPossibleMovesCount == 0
-            && currMoveSide == Side.Black)
-        {
-            return GameState.WhiteWon;
+                break;
+            }
+            case Side.Black:
+            {
+                var blackPossibleMoves = _rulesManager.GetPossibleSideMoves(Side.Black, board, _game.GetPoolsProvider());
+                var blackPossibleMovesCount = blackPossibleMoves.Count;
+                blackPossibleMoves.ReturnToPool();
+                if (blackPossibleMovesCount == 0)
+                {
+                    return GameState.WhiteWon;
+                }
+                break;
+            }
         }
 
         return GameState.GameBeingPlayed;
